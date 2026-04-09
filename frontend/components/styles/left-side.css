@@ -1,0 +1,289 @@
+/* =========================================================
+   LEFT SIDEBAR
+========================================================= */
+
+.left {
+  width: 460px;
+  min-width: 360px;
+  flex-shrink: 0;
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  margin-left: -45px;
+  scrollbar-width: none;
+}
+
+.left::-webkit-scrollbar {
+  width: 6px;
+}
+
+.left::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.3);
+  border-radius: 3px;
+}
+
+/* =========================================================
+   BUTTON LINKS
+========================================================= */
+
+.btns {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #6A00F4;
+  padding-bottom: 1rem;
+  margin: 1rem 1rem 0 8rem;
+  width: 90%;
+}
+
+.btns a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  font-size: 1.2rem;
+  color: #EDEDED;
+  font-weight: 600;
+  padding: 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.btns a:hover {
+  background-color: rgba(255, 79, 163, 0.2);
+}
+
+/* ICON SIZE LOCK */
+.btns a i {
+  font-size: 1.2rem;
+  margin-right: 1rem;
+}
+
+/* ACTIVE */
+.btns a:first-child {
+  color: #FF4FA3;
+}
+
+/* =========================================================
+   LOGIN PROMPT
+========================================================= */
+
+.login {
+  margin: 1rem 1rem 0 8rem;
+  border-bottom: 1px solid #6A00F4;
+  padding-bottom: 1rem;
+  width: 90%;
+}
+
+.login p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.login button {
+  margin-top: 1rem;
+  border: 1px solid #FF4FA3;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #FF4FA3;
+  border-radius: 999px;
+  height: 3rem;
+  width: 70%;
+  cursor: pointer;
+}
+
+.login button:hover {
+  background-color: rgba(255, 79, 163, 0.25);
+}
+
+/* =========================================================
+   ACCOUNTS
+========================================================= */
+
+.accounts {
+  margin: 1rem 1rem 0 8rem;
+  width: 90%;
+}
+
+.accounts p {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+}
+
+.user:hover {
+  background-color: rgba(106, 0, 244, 0.25);
+  cursor: pointer;
+}
+
+.user img {
+  height: 30px;
+  width: 30px;
+  border-radius: 50%;
+  border: 1px solid #FF4FA3;
+}
+
+.user h6 {
+  margin-left: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* =========================================================
+   LINKS SECTION
+========================================================= */
+
+.links {
+  margin: 3rem 1rem 0 8rem;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2.8rem;
+}
+
+.link-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem 1rem;
+  margin-right: 45px;
+}
+
+.link-list a {
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #FF4FA3;
+  transition: opacity 0.2s ease;
+}
+
+.link-list a:hover {
+  opacity: 0.7;
+}
+
+.copyright {
+  margin-top: auto;
+}
+
+.copyright h6 {
+  font-size: 0.75rem;
+  color: #EDEDED;
+  opacity: 0.6;
+}
+
+.font-600 {
+  font-weight: 800;
+}
+
+.tags {
+  margin-top: 1.5rem;
+  padding-left: 8rem;
+}
+
+.tag {
+  border: 2px solid #6A00F4;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  text-align: center;
+  color: #EDEDED;
+  transition: all 0.2s ease;
+  width: max-content;
+  font-size: 0.9rem;
+}
+
+.tag:hover {
+  border-color: #FF4FA3;
+  background-color: rgba(255, 79, 163, 0.1);
+  color: #FF4FA3;
+}
+
+.tag.active {
+  border-color: #FF4FA3;
+  background-color: rgba(255, 79, 163, 0.2);
+  color: #FF4FA3;
+}
+
+.tag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem 0rem;
+}
+
+@media (max-width: 1024px) {
+
+  .left {
+    width: 320px;
+    min-width: 280px;
+    margin-left: 0;
+  }
+
+  .btns,
+  .login,
+  .accounts,
+  .links {
+    margin-left: 2rem;
+  }
+
+  .tags {
+    padding-left: 2rem;
+  }
+
+  .link-list {
+    grid-template-columns: repeat(2, 1fr);
+    margin-right: 0;
+  }
+
+}
+
+@media (max-width: 768px) {
+  .left {
+  margin-left: -25px; 
+    position: fixed;
+    left: 0;
+    width: 320px;
+    height: calc(100vh - 4rem);
+    background-color: #1A0033;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 9999;
+    padding-left: 0rem;
+  }
+
+  .left-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 9998;
+    }
+
+
+  .tag-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 12px !important;
+  }
+
+  .left.left-open {
+    transform: translateX(0);
+  }
+
+    .tag {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+  }
+
+  .tag span {
+    font-size: 0.85rem;
+  }
+}

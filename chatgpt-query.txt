@@ -1,0 +1,7 @@
+if you want to fix it pls, first of all state what causes the problem, then state the code file path to be edited the old code to be replaced and then new code to replace it, the code to be deleted, and if a new code is to be added state exactly where it should be added that is the line before or after where it should be added. so i don't get confused.. and lastly dont add comments, add console.log so that i see what is going
+
+
+also let me know if there is a file to delete, or a new file to be created let me know the name of the file and the path to create/delete it, for new file provide the command to create the new file(s) and the full complete correct code
+
+
+also let me know what to do in supabase if necessary

@@ -1,0 +1,38 @@
+.video-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 9999;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-modal-content {
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.video-modal-close {
+  position: absolute;
+  top: 0px;
+  right: 10px;
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 10000;
+}
+
+.video-modal-close:hover {
+  color: var(--accent-hover);
+}

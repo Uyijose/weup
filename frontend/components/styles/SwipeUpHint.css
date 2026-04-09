@@ -1,0 +1,28 @@
+.swipe-up-hint {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.swipe-up-arrow {
+  font-size: 64px;
+  font-weight: 800;
+  color: white;
+  text-shadow:
+    0 0 10px rgba(255,255,255,0.6),
+    0 0 20px rgba(255,255,255,0.4);
+}
+
+.swipe-up-text {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  opacity: 0.9;
+}

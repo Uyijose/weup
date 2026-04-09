@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outstream Video Ads</title>
+    <style>
+        /* Ensure the video ad container is visible and has proper size */
+        .video-ad-container {
+            width: 100%;
+            max-width: 640px;  /* Adjust max width if needed */
+            height: 360px;      /* Adjust height for 16:9 ratio */
+            margin: 20px auto;
+        }
+        ins.eas6a97888e37 {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Outstream Video Ads Test Page</h1>
+    <p>The video ad should appear below:</p>
+
+    <!-- Video Ad Container -->
+    <div class="video-ad-container">
+        <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script> 
+        <ins class="eas6a97888e37" data-zoneid="5883840"></ins> 
+        <script>
+            (AdProvider = window.AdProvider || []).push({"serve": {}});
+        </script>
+    </div>
+</body>
+</html>

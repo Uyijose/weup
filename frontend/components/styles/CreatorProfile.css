@@ -1,0 +1,405 @@
+/* ================= CONTAINER ================= */
+
+.creator-profile-container {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 5rem 2rem 2rem;
+  background: linear-gradient(135deg, #120024, #1A0033 40%, #2a0050);
+  color: #EDEDED;
+  overflow-x: hidden;
+  scrollbar-width: none; 
+}
+
+.creator-profile-container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* ================= HERO ================= */
+
+.creator-hero {
+  width: 100%;
+  padding: 2rem 0 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.creator-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.creator-avatar-large {
+  width: 140px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF4FA3, #ff2e88);
+  flex-shrink: 0;
+}
+
+.creator-hero-info h2 {
+  font-size: 2.5rem;
+}
+
+.creator-hero-info p {
+  font-size: 1.1rem;
+  color: #FF4FA3;
+}
+
+/* ================= DESCRIPTION ================= */
+
+.creator-description-box {
+  background: #1a0033;
+  padding: 1.25rem;
+  border-radius: 14px;
+  margin-top: 1rem;
+}
+
+.creator-description-title {
+  font-size: 0.9rem;
+  color: #FF4FA3;
+  margin-bottom: 0.5rem;
+}
+
+.creator-description-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+/* ================= STATS ================= */
+
+.creator-stats {
+  display: flex;
+  justify-content: center;
+  gap: 5rem;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.creator-stats div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.creator-stats h3 {
+  font-size: 1.3rem;
+  color: #FF4FA3;
+}
+
+/* ================= VIDEOS ================= */
+
+.creator-videos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 2rem;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-bottom: 2rem;
+  scrollbar-width: none;
+}
+
+.creator-videos video {
+  width: 100%;
+  height: 190px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: black;
+}
+
+.creator-video-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 190px
+}
+
+.creator-video-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 190px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.video-play-button {
+  position: absolute;
+  bottom: 40px;
+  left: 10px;
+  font-size: 1.5rem;
+  background: rgba(0,0,0,0.5);
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.video-caption {
+  font-size: 0.9rem;
+  color: #fff;
+  opacity: 0.85;
+  bottom: 35px;
+}
+
+.video-delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  transition: 0.2s ease;
+}
+
+.video-delete-btn:hover {
+  transform: scale(1.08);
+  background: rgba(255, 79, 163, 0.95);
+}
+
+.creator-view-more-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+.creator-view-more-btn {
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+  border: none;
+}
+
+.creator-view-more-btn:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.video-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-modal-content {
+  width: 90%;
+  max-width: 900px;
+  height: 90%;
+  position: relative;
+  background: #120024;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-modal-video {
+  width: 100%;
+  height: 70%;
+  object-fit: contain;
+}
+
+.video-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.5rem;
+  color: white;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* ================= ACTIONS ================= */
+
+.subscribe-btn {
+  padding: 0.85rem 2.2rem;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #6A00F4, #00D2FF);
+  color: #EDEDED;
+  transition: all 0.35s ease;
+  box-shadow: 0 10px 25px rgba(0, 210, 255, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.subscribe-btn:hover {
+  transform: translateY(-4px) scale(1.06);
+  box-shadow: 0 14px 35px rgba(0, 210, 255, 0.55);
+}
+
+.subscribe-btn:active {
+  transform: scale(0.94);
+}
+
+.subscribe-btn.subscribed {
+  background: linear-gradient(135deg, #1A0033, #6A00F4);
+  box-shadow: 0 8px 22px rgba(106, 0, 244, 0.4);
+}
+
+.subscribe-btn.subscribed:hover {
+  box-shadow: 0 12px 30px rgba(106, 0, 244, 0.6);
+}
+
+.subscribe-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.subscribe-btn::after {
+  content: "";
+  position: absolute;
+  width: 130%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  top: 0;
+  left: -130%;
+  transition: all 0.7s ease;
+}
+
+.subscribe-btn:hover::after {
+  left: 130%;
+}
+
+.user-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.wup-value {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.wup-symbol {
+  position: relative;
+  font-weight: 900;
+  display: inline-block;
+}
+
+.wup-symbol::before,
+.wup-symbol::after {
+  content: "";
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  width: 3px;
+  background-color: #FF4FA3;
+}
+
+.wup-symbol::before {
+  left: 12%;
+}
+
+.wup-symbol::after {
+  right: 12%;
+}
+
+/* ================= BREAKPOINTS ================= */
+
+@media (max-width: 1024px) {
+  .creator-videos {
+    max-height: 480px;
+  }
+}
+
+@media (max-width: 768px) {
+  .creator-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .creator-stats {
+    gap: 2rem;
+  }
+
+  .user-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .creator-videos {
+    max-height: 420px;
+  }
+
+  .subscribe-btn {
+    margin-top: 1.5rem;
+    width: 100%;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .creator-avatar-large {
+    width: 100px;
+    aspect-ratio: 1 / 1;
+  }
+
+  .creator-hero-info h2 {
+    font-size: 1.5rem;
+  }
+
+  .creator-videos video {
+    height: 160px;
+  }
+
+  .subscribe-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .creator-videos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .creator-videos video {
+    height: 140px;
+  }
+
+  .creator-stats {
+    font-size: 0.75rem;
+    gap: 0.5rem;
+  }
+}

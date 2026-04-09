@@ -1,0 +1,13 @@
+{
+  "id": "98d52795-705c-47f5-b76d-73c04e6be8f9",
+  "caption": "Cloudinary test video",
+  "topic": "TestTopic",
+  "song_name": "Original Sound",
+  "profile_image": null,
+  "company": "test@example.com",
+  "video_url": "https://res.cloudinary.com/djfjuy99t/video/upload/v1771430383/r9nfoeg3oipovjb7p9h3.mp4",
+  "likes_count": 0,
+  "created_at": "2026-02-18T15:59:46.019474",
+  "updated_at": "2026-02-18T15:59:46.019474",
+  "user_id": "d08dd514-b410-4659-818f-7141a7529eb4"
+}

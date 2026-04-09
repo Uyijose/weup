@@ -1,0 +1,234 @@
+{
+  "generated_at": "2026-04-05T14:31:14.112Z",
+  "totals": {
+    "users": 24,
+    "admins": 2,
+    "creators": 3,
+    "regular_users": 19
+  },
+  "admins": [
+    {
+      "id": "36c3ccf5-ec15-421a-b476-32676f3b15c7",
+      "username": "jody6347",
+      "full_name": "Jose Judy",
+      "email": "joseuyibaz@gmail.com",
+      "is_admin": true,
+      "is_creator": false,
+      "created_at": "2026-03-21T13:47:20.43246+00:00"
+    },
+    {
+      "id": "03027a5d-89a1-4266-934e-59254b562e77",
+      "username": "redknight ",
+      "full_name": "Denise José Maria",
+      "email": "denisejosemaria8@gmail.com",
+      "is_admin": true,
+      "is_creator": true,
+      "created_at": "2026-03-04T09:38:23.502283+00:00"
+    }
+  ],
+  "creators": [
+    {
+      "id": "d08dd514-b410-4659-818f-7141a7529eb4",
+      "username": "big-big",
+      "full_name": "Uyi Joe",
+      "email": "utejoe.ju@gmail.com",
+      "is_admin": false,
+      "is_creator": true,
+      "created_at": "2026-02-18T06:22:15.041882+00:00",
+      "subscribers": 14
+    },
+    {
+      "id": "a8cfed5e-78e2-481c-a0d0-0b0c395185e7",
+      "username": "Mayagiantbane",
+      "full_name": "Giant Bane",
+      "email": "giantbaneforlife@gmail.com",
+      "is_admin": false,
+      "is_creator": true,
+      "created_at": "2026-03-11T18:44:29.842797+00:00",
+      "subscribers": 12
+    },
+    {
+      "id": "2a27fc9f-a0bb-4cc2-bc12-538960d5324d",
+      "username": "FUNWITH69",
+      "full_name": "Wright B",
+      "email": "wrightburbon@gmail.com",
+      "is_admin": false,
+      "is_creator": true,
+      "created_at": "2026-03-20T16:26:07.297248+00:00",
+      "subscribers": 15
+    }
+  ],
+  "regular_users": [
+    {
+      "id": "5b1ea2ce-f096-47ce-af21-efa0f9fff537",
+      "username": "uyee5532",
+      "full_name": "Uyi Obazee",
+      "email": "obazeeuyijoe@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-04-04T12:57:55.521372+00:00"
+    },
+    {
+      "id": "9d9ff8fc-567e-4696-8c5b-8d3bb116ef10",
+      "username": "roro1376",
+      "full_name": "Robert Maboro",
+      "email": "mabororobert@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-04-04T11:14:43.846016+00:00"
+    },
+    {
+      "id": "d9038d99-91d7-4a8f-84de-416d19da65b0",
+      "username": "wihe3334",
+      "full_name": "Winnie The poo",
+      "email": "penguins44462@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-30T20:17:11.030396+00:00"
+    },
+    {
+      "id": "0abade10-ea48-4174-8bb7-9f5364010033",
+      "username": null,
+      "full_name": "Ifechukwude Otu",
+      "email": "ifechukwudeotu3@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-19T22:06:00.373721+00:00"
+    },
+    {
+      "id": "9a44530f-2f3e-4d77-bd26-b0dd6e47f3af",
+      "username": "neiu5999",
+      "full_name": "Nel Keviu",
+      "email": "neshkeviu@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-04-04T18:12:25.177314+00:00"
+    },
+    {
+      "id": "aa56b2d9-d081-4c8d-aeb1-9bed47b7e5e5",
+      "username": null,
+      "full_name": "Shittu Abdulazeez",
+      "email": "shttbdlzz@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T11:51:11.737952+00:00"
+    },
+    {
+      "id": "3cb72fd5-47a3-45f9-8a25-9f67de205c6c",
+      "username": "kimb6664",
+      "full_name": "Ki Limb",
+      "email": "charlieerichiee6@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-19T23:17:24.913117+00:00"
+    },
+    {
+      "id": "ef3b01ac-7907-438c-b2f3-5734fdfada91",
+      "username": "heon3173",
+      "full_name": "Helena Grayson",
+      "email": "helenagraysonn3@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T11:51:43.970001+00:00"
+    },
+    {
+      "id": "832c0371-9ea9-4552-82f5-cc830e076350",
+      "username": "laki2376",
+      "full_name": "lazarus kariuki njeri",
+      "email": "kingevatonstaron@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-19T22:52:03.212924+00:00"
+    },
+    {
+      "id": "d52e1514-2f27-4ebd-a5a7-ae3984065ae4",
+      "username": "geon1856",
+      "full_name": "Getolg  Dickson ",
+      "email": "getolgdickson@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-26T01:48:45.797992+00:00"
+    },
+    {
+      "id": "62cac55f-00ff-4c4f-875f-ade305236b1b",
+      "username": "viua6886",
+      "full_name": "Victor Mbugua",
+      "email": "vmbugua260@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-27T13:03:06.734594+00:00"
+    },
+    {
+      "id": "4a6d8de3-8003-402f-bb56-98c8534b590e",
+      "username": "xxxx1008",
+      "full_name": " ",
+      "email": "shisumubramwel@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T21:28:03.801922+00:00"
+    },
+    {
+      "id": "49ba41de-18a9-4fb3-944b-99ec16ff571e",
+      "username": "saio3124",
+      "full_name": "Sammie  Fabio",
+      "email": "courageyungice@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T21:20:27.66482+00:00"
+    },
+    {
+      "id": "6013abd3-ef8d-4013-b562-0883ba0df08c",
+      "username": "fasc6995",
+      "full_name": "Fada CsC (C S C)",
+      "email": "abdulmsale972@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T02:20:31.133156+00:00"
+    },
+    {
+      "id": "a69013f7-71ac-4f6d-b057-0fbc2a291c12",
+      "username": "rany1992",
+      "full_name": "Ras Donny",
+      "email": "buerferdinardo@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-23T18:00:42.185393+00:00"
+    },
+    {
+      "id": "a19cf71d-1430-4c89-b28a-942706aa3dfa",
+      "username": "bies8239",
+      "full_name": "Bianca Daves",
+      "email": "davesbianca153@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T12:23:04.998395+00:00"
+    },
+    {
+      "id": "b3ea360a-e611-41ae-9288-196b6c84a0ab",
+      "username": "gron9206",
+      "full_name": "Greg Wilson ",
+      "email": "muhammed666419@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-29T00:03:24.069612+00:00"
+    },
+    {
+      "id": "d7fee95b-f7df-4908-b493-bee3550133ff",
+      "username": "prxx6364",
+      "full_name": "Private",
+      "email": "ej382910@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T23:09:02.466447+00:00"
+    },
+    {
+      "id": "7cca8c4f-59d1-44ca-8511-40b3fceae4ef",
+      "username": "hati5134",
+      "full_name": "Haitian224 Haiti",
+      "email": "mpjalloh224@gmail.com",
+      "is_admin": false,
+      "is_creator": false,
+      "created_at": "2026-03-20T06:50:47.460122+00:00"
+    }
+  ]
+}

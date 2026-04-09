@@ -1,0 +1,17 @@
+{
+  "post": {
+    "id": "4207539e-e66b-4f2d-a3e8-4ac570ae8f81",
+    "caption": "Simple upload without compression or partition",
+    "topic": "TestTopic",
+    "song_name": "Original Sound",
+    "company": "utejoe",
+    "video_url": "https://pub-3b6a7f2a04894d4c886ca23c9467de38.r2.dev/video-1773078808692.mp4",
+    "created_at": "2026-03-09T17:53:42.525132",
+    "updated_at": "2026-03-09T17:53:42.525132",
+    "user_id": "d08dd514-b410-4659-818f-7141a7529eb4",
+    "comments_count": 0,
+    "likes_count": 0,
+    "views_count": 0
+  },
+  "video_url": "https://pub-3b6a7f2a04894d4c886ca23c9467de38.r2.dev/video-1773078808692.mp4"
+}

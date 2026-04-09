@@ -1,0 +1,111 @@
+/* =========================================================
+   GLOBAL RESET (TAILWIND BASE REPLACEMENT)
+========================================================= */
+
+/* color palette
+#1A0033
+#FF4FA3
+#00D2FF
+#EDEDED
+#6A00F4 */
+
+:root {
+  --bg: #12061F;
+  --surface: #1B0D2B;
+  --surface-2: #241238;
+  --border: #34214D;
+  --text: #F3EEF7;
+  --text-muted: #B9AFC8;
+  --accent: #FF4FA3;
+  --accent-hover: #FF78B8;
+  --accent-2: #7C4DFF;
+  --info: #3ECFFF;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Prevent SVG & ICON BLOWS */
+svg {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+  fill: currentColor;
+}
+
+i {
+  font-style: normal;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* Buttons & Inputs Reset */
+button,
+input {
+  font-family: inherit;
+  outline: none;
+  border: none;
+  background: none;
+}
+
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+/* =========================================================
+   BODY
+========================================================= */
+
+body {
+  display: flex;
+  flex-direction: column;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+/* =========================================================
+    MAIN LAYOUT
+  ========================================================= */
+
+main {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+.no-download-video {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.no-download-video::-webkit-media-controls {
+  display: none !important;
+}
+
+.no-download-video::-webkit-media-controls-enclosure {
+  display: none !important;
+}

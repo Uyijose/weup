@@ -1,0 +1,32 @@
+[
+  {
+    "id": "98d52795-705c-47f5-b76d-73c04e6be8f9",
+    "caption": "Cloudinary test video",
+    "topic": "TestTopic",
+    "song_name": "Original Sound",
+    "video_url": "https://res.cloudinary.com/djfjuy99t/video/upload/v1771430383/r9nfoeg3oipovjb7p9h3.mp4",
+    "likes_count": 0,
+    "created_at": "2026-02-18T15:59:46.019474",
+    "user_id": "d08dd514-b410-4659-818f-7141a7529eb4",
+    "users": {
+      "email": "utejoe.ju@gmail.com",
+      "full_name": "Uyi Obazee",
+      "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocK-YHYtnD_Hlb3Av4FkByAVNFuY1c5GoHtCJ-lapOH7o_2EIg4L=s96-c"
+    }
+  },
+  {
+    "id": "a319e14b-f1b3-48ac-8de6-c5bc6033e507",
+    "caption": "Test video post",
+    "topic": "TestTopic",
+    "song_name": "Original Sound - Node.js Test",
+    "video_url": "https://vquensdjdnnjhjtxslsc.supabase.co/storage/v1/object/public/videos/test.mp4",
+    "likes_count": 0,
+    "created_at": "2026-02-18T09:25:42.792182",
+    "user_id": "d08dd514-b410-4659-818f-7141a7529eb4",
+    "users": {
+      "email": "utejoe.ju@gmail.com",
+      "full_name": "Uyi Obazee",
+      "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocK-YHYtnD_Hlb3Av4FkByAVNFuY1c5GoHtCJ-lapOH7o_2EIg4L=s96-c"
+    }
+  }
+]

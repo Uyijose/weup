@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popup Ads Page</title>
+</head>
+<body>
+    <h1>Popup Ads Test Page</h1>
+    <p>Click anywhere on the page to trigger the popunder popup.</p>
+
+    <!-- Popunder Ads Script -->
+    <script type="application/javascript">
+        (function() {
+            var adConfig = {
+                "ads_host": "a.pemsrv.com",
+                "syndication_host": "s.pemsrv.com",
+                "idzone": 5884826,
+                "popup_fallback": false,
+                "popup_force": false,
+                "chrome_enabled": true,
+                "new_tab": false,
+                "frequency_period": 720,
+                "frequency_count": 1,
+                "trigger_method": 3,
+                "trigger_class": "",
+                "trigger_delay": 0,
+                "capping_enabled": true,
+                "tcf_enabled": true,
+                "only_inline": false
+            };
+
+            var popMagic = {
+                open_count: 0,
+                venor_loaded: false,
+                venor: false,
+                init: function(config) {
+                    this.config = config;
+                    this.addEvent(document, "click", this.openPopup.bind(this));
+                },
+                openPopup: function(e) {
+                    if (this.open_count >= this.config.frequency_count) return;
+                    window.open("https://" + this.config.syndication_host + "/v1/link.php?idzone=" + this.config.idzone, "_blank");
+                    this.open_count++;
+                },
+                addEvent: function(el, evt, fn) {
+                    el.addEventListener ? el.addEventListener(evt, fn, false) : el.attachEvent("on" + evt, fn);
+                }
+            };
+
+            popMagic.init(adConfig);
+        })();
+    </script>
+</body>
+</html>

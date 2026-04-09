@@ -1,0 +1,50 @@
+.subscribers-page {
+  padding: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.subscribers-page h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.subscribers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.subscriber-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.6rem;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.subscriber-row:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.subscriber-row img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.subscriber-row span {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .subscriber-row img {
+    width: 34px;
+    height: 34px;
+  }
+}
