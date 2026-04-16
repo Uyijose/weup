@@ -69,11 +69,25 @@ export const useMessagesStore = create((set, get) => ({
   },
 
   openConversation: async (conversationId) => {
-    set({ loading: true, activeConversation: conversationId });
+    console.log("[OPEN CONVERSATION INIT]", conversationId);
+
+    set({ loading: true });
 
     const res = await fetchMessages(conversationId);
 
+    console.log("[OPEN CONVERSATION FETCH]", {
+      conversationId,
+      messages: res.messages?.length
+    });
+
+    const convoFromList = get().conversations.find(
+      c => c.id === conversationId
+    );
+
+    console.log("[CONVERSATION FROM STORE]", convoFromList);
+
     set((state) => ({
+      activeConversation: convoFromList || state.activeConversation,
       messages: {
         ...state.messages,
         [conversationId]: res.messages || []
@@ -82,17 +96,28 @@ export const useMessagesStore = create((set, get) => ({
     }));
   },
 
-  sendMessage: async (conversationId, content) => {
-    const res = await sendMessage(conversationId, content);
+  appendMessage: (conversationId, message) => {
+    console.log("[STORE APPEND MESSAGE]", message);
 
     set((state) => ({
       messages: {
         ...state.messages,
         [conversationId]: [
           ...(state.messages[conversationId] || []),
-          res.message
+          message
         ]
       }
     }));
+  },
+
+  sendMessage: async (conversationId, content) => {
+    const res = await sendMessage(conversationId, content);
+
+    console.log("[SEND MESSAGE RESPONSE]", {
+      conversationId,
+      message: res.message
+    });
+
+    return res;
   }
 }));

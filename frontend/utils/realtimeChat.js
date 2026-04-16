@@ -56,13 +56,28 @@ export function subscribeToConversation({
       onPresence(state);
     })
     .subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await presenceChannel.track({
-          user_id: userId,
-          online_at: new Date().toISOString()
-        });
-      }
+        if (status === "SUBSCRIBED") {
+            console.log("[PRESENCE JOIN]", userId);
+
+            await presenceChannel.track({
+            user_id: userId,
+            online: true,
+            last_seen: new Date().toISOString()
+            });
+        }
     });
+
+    window.addEventListener("beforeunload", async () => {
+        console.log("[PRESENCE LEAVE]", userId);
+
+        await supabase
+            .from("users")
+            .update({
+            online: false,
+            last_seen: new Date().toISOString()
+            })
+            .eq("id", userId);
+        });
 
   return () => {
     console.log("[REALTIME] unsubscribing:", conversationId);
@@ -72,17 +87,29 @@ export function subscribeToConversation({
   };
 }
 
-export function emitTyping(conversationId, userId, state) {
+let typingTimeout = null;
+
+export function emitTyping(conversationId, userId) {
   if (!typingChannel) return;
 
-  typingChannel.send({
-    type: "broadcast",
-    event: "typing",
-    payload: {
-      user_id: userId,
-      state
-    }
-  });
+  if (!typingTimeout) {
+    typingChannel.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { user_id: userId, state: "typing" }
+    });
+    console.log("[TYPING START]", userId);
+  }
 
-  console.log("[TYPING EMIT]", { conversationId, state });
+  clearTimeout(typingTimeout);
+
+  typingTimeout = setTimeout(() => {
+    typingChannel.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { user_id: userId, state: "stop" }
+    });
+    console.log("[TYPING STOP]", userId);
+    typingTimeout = null;
+  }, 5000);
 }

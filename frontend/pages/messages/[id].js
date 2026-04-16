@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "../../stores/authStore";
 import { useRouter } from "next/router";
 import { useMessagesStore } from "../../stores/messagesStore";
+import { subscribeToConversation, emitTyping } from "../../utils/realtimeChat";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -18,28 +19,78 @@ export default function ChatPage() {
     messages,
     conversations,
     openConversation,
+    loadConversations,
     sendMessage
   } = useMessagesStore();
 
   const { user } = useAuthStore();
 
   const [text, setText] = useState("");
+  const [typingUser, setTypingUser] = useState(null);
+  const [presence, setPresence] = useState({});
 
   useEffect(() => {
-    if (id) openConversation(id);
-  }, [id]);
+    if (conversations.length === 0) {
+      console.log("[CHAT PAGE] loading conversations");
+      loadConversations();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+
+    console.log("[CHAT INIT OPEN]", {
+      id,
+      conversationsLength: conversations.length
+    });
+
+    if (conversations.length === 0) {
+      console.log("[CHAT INIT] waiting for conversations first");
+      return;
+    }
+
+    openConversation(id);
+  }, [id, conversations.length]);
+
+  useEffect(() => {
+    if (!id || !user?.id) return;
+
+    console.log("[CHAT REALTIME INIT]", id);
+
+    const unsubscribe = subscribeToConversation({
+      conversationId: id,
+      userId: user.id,
+      onMessage: (msg) => {
+        console.log("[CHAT LIVE MESSAGE]", msg);
+        useMessagesStore.getState().appendMessage(id, msg);
+      },
+      onTyping: (data) => {
+        console.log("[CHAT TYPING EVENT]", data);
+
+        if (data.state === "typing") {
+          setTypingUser(data.user_id);
+        }
+
+        if (data.state === "stop") {
+          setTypingUser(null);
+        }
+      },
+      onPresence: (state) => {
+        setPresence(state);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [id, user?.id]);
 
   const convoMessages = messages[id] || [];
 
-  const conversation = conversations.find(
-    (c) => c.id === id
-  );
-
-  const conversationTitle = conversation?.title || "Chat";
+  const conversationTitle =
+    activeConversation?.title || "Chat";
 
   console.log("[CHAT HEADER TITLE]", {
     conversationId: id,
-    conversation,
+    activeConversation,
     title: conversationTitle
   });
 
@@ -60,7 +111,21 @@ export default function ChatPage() {
         >
           ←
         </button>
-        <h2>{conversationTitle} </h2>
+        <div className="chat-title">
+          <h2>{conversationTitle}</h2>
+          <div className="chat-status">
+            {typingUser && "typing..."}
+            {!typingUser &&
+              Object.values(presence).some(
+                (p) => p[0]?.user_id !== user?.id
+              ) && "online"}
+            {!typingUser &&
+              !Object.values(presence).some(
+                (p) => p[0]?.user_id !== user?.id
+              ) && "offline"}
+
+          </div>
+        </div>
       </div>
 
       <div className="chat-body">
@@ -88,7 +153,10 @@ export default function ChatPage() {
       <div className="chat-input">
         <input
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            emitTyping(id, user.id);
+          }}
           placeholder="Type a message..."
         />
 

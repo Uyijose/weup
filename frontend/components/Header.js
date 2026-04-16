@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../stores/authStore";
-import { FiSearch, FiUpload, FiMenu } from "react-icons/fi";
+import { FiSearch, FiUpload, FiMenu, FiMessageCircle } from "react-icons/fi";
 import BecomeCreatorModal from "./BecomeCreatorModal";
 import avatarFallback from "./assets/avatar-fallback.jpg";
 // import LeftHandSide from "./LeftHandSide";
@@ -80,13 +80,15 @@ const Header = ({ mobileMenu = false, setMobileMenu = () => {} }) => {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
-            <img
-              className="logo"
-              onClick={() => router.push("/")}
-              src="https://res.cloudinary.com/djfjuy99t/image/upload/e_background_removal/f_png/v1771442418/weup-icon_ykirb1.jpg"
-              // src="https://res.cloudinary.com/djfjuy99t/image/upload/e_background_removal/f_png/v1771442418/weup-icon_ykirb1.jpg"
-              alt="weup"
-            />
+           <h1
+              className="logo-text"
+              onClick={() => {
+                console.log("[NAVIGATION] go home from logo");
+                router.push("/");
+              }}
+            >
+              WeUp
+            </h1>
           </motion.div>
           <motion.div
             initial={{ opacity: 0 }}
@@ -119,6 +121,17 @@ const Header = ({ mobileMenu = false, setMobileMenu = () => {} }) => {
             viewport={{ once: true }}
             className="nav-right"
           >
+
+            <button
+              className="messages-btn"
+              onClick={() => {
+                console.log("[NAVIGATION] going to messages");
+                router.push("/messages");
+              }}
+            >
+              <FiMessageCircle />
+            </button>
+
             <button
               className="mobile-search-btn"
               onClick={() => {
