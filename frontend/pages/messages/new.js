@@ -80,8 +80,18 @@ export default function NewMessagePage() {
 
   return (
     <div className="new-message-container">
-      <h2>New Message</h2>
-
+      <div className="new-message-header">
+        <button
+            className="chat-back-btn"
+            onClick={() => {
+            console.log("[NAVIGATE] BACK FROM NEW MESSAGE");
+            router.back();
+            }}
+        >
+            ←
+        </button>
+        <h2>New Message</h2>
+        </div>
       <input
         placeholder="Search users..."
         value={query}

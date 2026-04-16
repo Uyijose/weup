@@ -3,6 +3,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { useRouter } from "next/router";
 import { useMessagesStore } from "../../stores/messagesStore";
 import { subscribeToConversation, emitTyping } from "../../utils/realtimeChat";
+import Skeleton from "../../components/Skeleton/Skeleton";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function ChatPage() {
   const [text, setText] = useState("");
   const [typingUser, setTypingUser] = useState(null);
   const [presence, setPresence] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (conversations.length === 0) {
@@ -37,20 +39,29 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !user?.id) return;
 
     console.log("[CHAT INIT OPEN]", {
       id,
       conversationsLength: conversations.length
     });
 
-    if (conversations.length === 0) {
-      console.log("[CHAT INIT] waiting for conversations first");
-      return;
-    }
+    const init = async () => {
+      setLoading(true);
 
-    openConversation(id);
-  }, [id, conversations.length]);
+      if (conversations.length === 0) {
+        console.log("[CHAT INIT] loading conversations first");
+        await loadConversations();
+      }
+
+      console.log("[CHAT INIT] opening conversation");
+      await openConversation(id);
+
+      setLoading(false);
+    };
+
+    init();
+  }, [id, user?.id]);
 
   useEffect(() => {
     if (!id || !user?.id) return;
@@ -86,7 +97,9 @@ export default function ChatPage() {
   const convoMessages = messages[id] || [];
 
   const conversationTitle =
-    activeConversation?.title || "Chat";
+    activeConversation?.title ||
+    conversations.find(c => c.id === id)?.title ||
+    "Loading...";
 
   console.log("[CHAT HEADER TITLE]", {
     conversationId: id,

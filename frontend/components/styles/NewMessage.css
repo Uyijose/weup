@@ -12,6 +12,14 @@
   margin-bottom: 15px;
 }
 
+.new-message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+
 .user-results {
   display: flex;
   flex-direction: column;

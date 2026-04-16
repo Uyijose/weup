@@ -29,11 +29,27 @@ export default function MessagesPage() {
   return (
     <div className="messages-container">
       <div className="messages-header">
-        <h1>Messages</h1>
+        <div className="messages-header-left">
+          
+           <h1
+              className="logo-text"
+              onClick={() => {
+                console.log("[NAVIGATION] go home from logo");
+                router.push("/");
+              }}
+            >
+              WeUp
+            </h1>
+
+          <h1>Messages</h1>
+        </div>
 
         <button
           className="new-message-btn"
-          onClick={() => router.push("/messages/new")}
+          onClick={() => {
+            console.log("[NAVIGATE] NEW MESSAGE");
+            router.push("/messages/new");
+          }}
         >
           + New
         </button>
