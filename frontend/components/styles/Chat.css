@@ -1,7 +1,8 @@
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100%;
   color: var(--text);
 }
 
@@ -40,6 +41,7 @@
 .chat-body {
   flex: 1;
   padding: 15px;
+  padding-bottom: 90px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -68,6 +70,9 @@
   padding: 10px;
   background: var(--surface);
   gap: 10px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 .chat-input input {

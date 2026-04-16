@@ -32,6 +32,26 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const input = document.querySelector(".chat-input input");
+
+    if (!input) return;
+
+    const onFocus = () => {
+      console.log("[CHAT INPUT] focused");
+      setTimeout(() => {
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    };
+
+    input.addEventListener("focus", onFocus);
+
+    return () => {
+      input.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+
+  useEffect(() => {
     if (conversations.length === 0) {
       console.log("[CHAT PAGE] loading conversations");
       loadConversations();
