@@ -27,34 +27,84 @@ router.use(requireAuth);
 
 router.get("/conversations", async (req, res) => {
   try {
+    console.log("[MESSAGING] GET /conversations triggered");
+    console.log("[MESSAGING] req.user:", req.user);
+
+    if (!req.user || !req.user.id) {
+      console.log("[MESSAGING] ERROR: Missing req.user.id");
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized - no user found"
+      });
+    }
+
     const conversations = await getUserConversations(req.user.id);
 
-    res.json({
+    console.log("[MESSAGING] conversations fetched:", conversations.length);
+
+    return res.json({
       success: true,
       conversations,
       count: conversations.length,
       timestamp: new Date().toISOString()
     });
+
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: err.message });
+    console.log("[MESSAGING] CONVERSATIONS ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+      stack: err.stack
+    });
   }
 });
 
 router.post("/conversations", async (req, res) => {
   try {
-    const { members, is_group = false, title } = req.body;
+    console.log("[MESSAGING] POST /conversations triggered");
+    console.log("[MESSAGING] req.user:", req.user);
 
-    if (!Array.isArray(members) || members.length === 0) {
-      return res.status(400).json({ error: "Members array is required" });
+    if (!req.user || !req.user.id) {
+      console.log("[MESSAGING] ERROR: Missing req.user");
+      return res.status(401).json({
+        success: false,
+        error: "Unauthorized - missing user"
+      });
     }
 
-    const conversation = await createConversation(
-      req.user.id,
+    const { members, member_ids, is_group = false, title } = req.body;
+
+    const finalMembers = Array.isArray(member_ids)
+      ? member_ids
+      : Array.isArray(members)
+      ? members
+      : [];
+
+    console.log("[MESSAGING] payload received:", {
       members,
+      member_ids,
+      finalMembers,
       is_group,
       title
-    );
+    });
+
+    if (!Array.isArray(finalMembers) || finalMembers.length === 0) {
+      console.log("[MESSAGING] INVALID MEMBERS ARRAY");
+      return res.status(400).json({
+        success: false,
+        error: "Members array is required"
+      });
+    }
+
+    const conversation = await createConversation({
+      creator_id: req.user.id,
+      member_ids: finalMembers,
+      is_group,
+      title
+    });
+
+    console.log("[MESSAGING] conversation created:", conversation?.id);
 
     res.status(201).json({
       success: true,
@@ -62,7 +112,7 @@ router.post("/conversations", async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    console.log(err);
+    console.log("[MESSAGING] POST ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });

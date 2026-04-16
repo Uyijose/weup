@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useMessagesStore } from "../../stores/messagesStore";
-import "../../components/styles/Messages.css";
+import { useAuthStore } from "../../stores/authStore";
 
 export default function MessagesPage() {
   const router = useRouter();
+  const { user } = useAuthStore();
+  const { createConversation } = useMessagesStore();
 
   const {
     conversations,
@@ -28,6 +30,13 @@ export default function MessagesPage() {
     <div className="messages-container">
       <div className="messages-header">
         <h1>Messages</h1>
+
+        <button
+          className="new-message-btn"
+          onClick={() => router.push("/messages/new")}
+        >
+          + New
+        </button>
       </div>
 
       <input

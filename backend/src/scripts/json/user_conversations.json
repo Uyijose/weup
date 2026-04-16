@@ -1,0 +1,63 @@
+{
+  "user": {
+    "id": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43",
+    "aud": "authenticated",
+    "role": "authenticated",
+    "email": "utejoe.ju@gmail.com",
+    "email_confirmed_at": "2026-04-10T05:15:26.375636Z",
+    "phone": "",
+    "confirmed_at": "2026-04-10T05:15:26.375636Z",
+    "last_sign_in_at": "2026-04-10T07:23:16.96102Z",
+    "app_metadata": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "user_metadata": {
+      "email_verified": true,
+      "full_name": "Cyber Space"
+    },
+    "identities": [
+      {
+        "identity_id": "b1efdc3c-1a87-4005-9396-3f3fc6689c31",
+        "id": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43",
+        "user_id": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43",
+        "identity_data": {
+          "email": "utejoe.ju@gmail.com",
+          "email_verified": false,
+          "phone_verified": false,
+          "sub": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43"
+        },
+        "provider": "email",
+        "last_sign_in_at": "2026-04-10T05:15:26.37034Z",
+        "created_at": "2026-04-10T05:15:26.370966Z",
+        "updated_at": "2026-04-10T05:15:26.370966Z",
+        "email": "utejoe.ju@gmail.com"
+      }
+    ],
+    "created_at": "2026-04-10T05:15:26.342916Z",
+    "updated_at": "2026-04-16T13:16:27.299212Z",
+    "is_anonymous": false
+  },
+  "total_conversations": 1,
+  "conversations": [
+    {
+      "conversation": {
+        "id": "14b9bda9-eff3-4d12-8cbf-550bca20ab26",
+        "is_group": false,
+        "title": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43:d239ca9f-9e1d-4649-ac28-2aa19d120dce",
+        "created_at": "2026-04-16T12:23:57.078948+00:00",
+        "last_message_at": null
+      },
+      "messages": [
+        {
+          "id": "1d894fb7-56a7-465c-b11c-3c2621cfc04a",
+          "content": "hello",
+          "sender_id": "d239ca9f-9e1d-4649-ac28-2aa19d120dce",
+          "created_at": "2026-04-16T12:28:46.009092+00:00"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+.new-message-container {
+  padding: 20px;
+  color: var(--text);
+}
+
+.new-message-container input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: white;
+  margin-bottom: 15px;
+}
+
+.user-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-item {
+  padding: 12px;
+  background: var(--surface);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.user-item:hover {
+  background: var(--surface-2);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 15px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border-radius: 10px;
+}

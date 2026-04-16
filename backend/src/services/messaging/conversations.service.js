@@ -30,18 +30,33 @@ export async function createConversation({
   if (!is_group && allMembers.length === 2) {
     const { data: existing } = await supabase
       .from("conversation_members")
-      .select("conversation_id")
+      .select("conversation_id, user_id")
       .in("user_id", allMembers);
 
-    if (existing && existing.length === 2) {
-      const convoId = existing[0].conversation_id;
-      const { data } = await supabase
-        .from("conversations")
-        .select("*")
-        .eq("id", convoId)
-        .single();
+    const grouped = {};
 
-      if (data) return data;
+    for (const row of existing || []) {
+      if (!grouped[row.conversation_id]) {
+        grouped[row.conversation_id] = new Set();
+      }
+      grouped[row.conversation_id].add(row.user_id);
+    }
+
+    for (const [conversationId, membersSet] of Object.entries(grouped)) {
+      const hasAll = allMembers.every((id) => membersSet.has(id));
+
+      if (hasAll && membersSet.size === allMembers.length) {
+        const { data } = await supabase
+          .from("conversations")
+          .select("*")
+          .eq("id", conversationId)
+          .single();
+
+        if (data) {
+          console.log("[EXISTING CONVERSATION FOUND]", conversationId);
+          return data;
+        }
+      }
     }
   }
 
@@ -91,30 +106,96 @@ export async function getUserConversations(userId) {
 
   validateUUID(userId);
 
+  console.log("[CONVERSATIONS] fetching for userId:", userId);
+
   const { data, error } = await supabase
     .from("conversation_members")
     .select(
       `
-      conversation:conversations (
-        *,
-        members:conversation_members (
-          user_id,
-          last_read_at,
-          user:users (
-            id,
-            username,
-            avatar_url
+        conversation:conversations (
+          *,
+          members:conversation_members (
+            user_id,
+            last_read_at,
+            user:users (
+              id,
+              username,
+              avatar_url
+            )
           )
         )
-      )
-    `
+      `
     )
-    .eq("user_id", userId)
-    .order("conversation.last_message_at", { ascending: false });
+    .eq("user_id", userId);
+
+  console.log("[CONVERSATIONS] raw response:", data);
+  console.log("[CONVERSATIONS] error:", error);
 
   if (error) throw error;
 
-  return data.map((r) => r.conversation);
+  console.log("[CONVERSATIONS] building enriched conversations");
+
+  const currentUserId = userId;
+
+  const convoIds = data.map((r) => r.conversation.id);
+
+const { data: messages } = await supabase
+  .from("messages")
+  .select("id, conversation_id, content, created_at")
+  .in("conversation_id", convoIds)
+  .order("created_at", { ascending: false });
+
+const grouped = {};
+
+for (const msg of messages || []) {
+  if (!grouped[msg.conversation_id]) {
+    grouped[msg.conversation_id] = msg;
+  }
+}
+
+const enriched = data.map((r) => {
+  const convo = r.conversation;
+
+  const members = convo.members || [];
+
+  const otherMembers = members
+    .filter(m => m.user_id !== userId)
+    .map(m => m.user)
+    .filter(Boolean);
+
+  let displayTitle = convo.title;
+
+  if (!convo.is_group) {
+    const otherUser = otherMembers[0];
+
+    displayTitle =
+      otherUser?.full_name ||
+      otherUser?.username ||
+      "Unknown User";
+  }
+
+  const lastMessage = grouped[convo.id];
+
+  return {
+    id: convo.id,
+    is_group: convo.is_group,
+    created_at: convo.created_at,
+    last_message_at: lastMessage?.created_at || null,
+    last_message: lastMessage?.content || null,
+    title: displayTitle,
+    raw_title: convo.title,
+    members
+  };
+});
+
+const sorted = enriched.sort((a, b) => {
+  const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+  const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+
+  return bTime - aTime;
+});
+
+return sorted;
 }
 
 export async function addMemberToConversation(conversationId, userId) {

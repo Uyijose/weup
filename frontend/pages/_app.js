@@ -20,6 +20,9 @@ import "../components/styles/AdminHeader.css";
 import "../components/styles/Legal.css";
 import "../components/styles/SwipeUpHint.css";
 import "../components/styles/videoModal.css";
+import "../components/styles/Messages.css";
+import "../components/styles/Chat.css";
+import "../components/styles/NewMessage.css"
 
 import Head from "next/head";
 import { useEffect, useState } from 'react';
