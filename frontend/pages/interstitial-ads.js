@@ -39,10 +39,10 @@ const InterstitialAdsPage = () => {
   return (
     <>
       <Head>
-        <title>Interstitial Ads | WhosUp</title>
+        <title>Interstitial Ads | weup</title>
         <meta
           name="description"
-          content="Interstitial ad content on WhosUp"
+          content="Interstitial ad content on weup"
         />
       </Head>
 

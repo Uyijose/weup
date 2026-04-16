@@ -117,35 +117,35 @@ return (
     <Head>
       <title>
         {creatorData
-          ? `${creatorData.platform_title?.slice(0, 35)}${creatorData.platform_title && creatorData.platform_title.length > 35 ? "..." : ""} | WhosUp`
-          : "WhosUp"}
+          ? `${creatorData.platform_title?.slice(0, 35)}${creatorData.platform_title && creatorData.platform_title.length > 35 ? "..." : ""} | weup`
+          : "weup"}
       </title>
 
       <meta
         name="description"
-        content={creatorData?.creator_description || "Watch and subscribe to creators on WhosUp."}
+        content={creatorData?.creator_description || "Watch and subscribe to creators on weup."}
       />
       
       <link
         rel="canonical"
-        href={`https://whosup.fun/creator/${creatorData?.creator_username}`}
+        href={`https://weup.fun/creator/${creatorData?.creator_username}`}
       />
       <meta name="robots" content="index, follow" />
 
       <meta property="og:type" content="website" />
-      <meta property="og:title" content={creatorData?.platform_title || "WhosUp"} />
-      <meta property="og:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WhosUp."} />
-      <meta property="og:url" content={`https://whosup.fun/creator/${creatorData?.creator_username}`} />
-      <meta property="og:image:alt" content={creatorData?.platform_title || "WhosUp creator"} />
-      <meta property="og:site_name" content="WhosUp" />
+      <meta property="og:title" content={creatorData?.platform_title || "weup"} />
+      <meta property="og:description" content={creatorData?.creator_description || "Watch and subscribe to creators on weup."} />
+      <meta property="og:url" content={`https://weup.fun/creator/${creatorData?.creator_username}`} />
+      <meta property="og:image:alt" content={creatorData?.platform_title || "weup creator"} />
+      <meta property="og:site_name" content="weup" />
       <meta
         property="og:image"
-        content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
+        content={creatorData?.creator_avatar_url || "https://weup.fun/default-preview.jpg"}
       />
 
       <meta
         property="og:image:secure_url"
-        content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
+        content={creatorData?.creator_avatar_url || "https://weup.fun/default-preview.jpg"}
       />
 
       <meta property="og:image:type" content="image/jpeg" />
@@ -153,9 +153,9 @@ return (
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={creatorData?.platform_title || "WhosUp"} />
-      <meta name="twitter:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WhosUp."} />
-      <meta name="twitter:image" content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"} />
+      <meta name="twitter:title" content={creatorData?.platform_title || "weup"} />
+      <meta name="twitter:description" content={creatorData?.creator_description || "Watch and subscribe to creators on weup."} />
+      <meta name="twitter:image" content={creatorData?.creator_avatar_url || "https://weup.fun/default-preview.jpg"} />
       <meta name="twitter:image:src" content={creatorData?.creator_avatar_url} />
 
       <link

@@ -79,10 +79,10 @@ const AdsPage = () => {
   return (
     <>
       <Head>
-        <title>Sponsored Video | WhosUp</title>
+        <title>Sponsored Video | weup</title>
         <meta
           name="description"
-          content="Sponsored video content on WhosUp"
+          content="Sponsored video content on weup"
         />
         <meta
           httpEquiv="Delegate-CH"

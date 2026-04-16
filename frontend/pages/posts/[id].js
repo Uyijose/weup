@@ -7,15 +7,15 @@ import { supabase } from "../../utils/supabaseClient";
 
 const DetailsPage = ({ post }) => {
   const title = post?.caption
-    ? `${post.caption} | WhosUp`
-    : "Watch viral videos on WhosUp";
+    ? `${post.caption} | weup`
+    : "Watch viral videos on weup";
 
   const description =
     post?.caption ||
-    "Watch and discover viral short videos on WhosUp.";
+    "Watch and discover viral short videos on weup.";
 
   const videoUrl = post?.video_url || "";
-  const pageUrl = `https://whosup.fun/posts/${post?.id}`;
+  const pageUrl = `https://weup.fun/posts/${post?.id}`;
 
   return (
     <div className="detail-page-wrapper">
@@ -28,17 +28,17 @@ const DetailsPage = ({ post }) => {
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
         <meta property="og:url" content={pageUrl} />
-        <meta property="og:image:alt" content={post?.caption || "WhosUp posts"} />
-        <meta property="og:site_name" content="WhosUp" />
+        <meta property="og:image:alt" content={post?.caption || "weup posts"} />
+        <meta property="og:site_name" content="weup" />
 
         <meta
           property="og:image"
-          content={post?.thumbnail_url || "https://whosup.fun/default-preview.jpg"}
+          content={post?.thumbnail_url || "https://weup.fun/default-preview.jpg"}
         />
 
         <meta
           property="og:image:secure_url"
-          content={post?.thumbnail_url || "https://whosup.fun/default-preview.jpg"}
+          content={post?.thumbnail_url || "https://weup.fun/default-preview.jpg"}
         />
 
         <meta property="og:image:type" content="image/jpeg" />
@@ -50,7 +50,7 @@ const DetailsPage = ({ post }) => {
         <meta name="twitter:description" content={description} />
         <meta
           name="twitter:image"
-          content={post?.thumbnail_url || "https://whosup.fun/default-preview.jpg"}
+          content={post?.thumbnail_url || "https://weup.fun/default-preview.jpg"}
         />
 
         <meta name="twitter:image:src" content={post?.thumbnail_url} />

@@ -41,10 +41,10 @@ const PopupAdsPage = () => {
   return (
     <>
       <Head>
-        <title>Popup Ads | WhosUp</title>
+        <title>Popup Ads | weup</title>
         <meta
           name="description"
-          content="Popunder ad demo on WhosUp"
+          content="Popunder ad demo on weup"
         />
       </Head>
 

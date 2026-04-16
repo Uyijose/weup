@@ -5,13 +5,13 @@ export default function Safety() {
   return (
     <div className="legal-page">
       <Head>
-        <title>Safety on WhosUp</title>
+        <title>Safety on weup</title>
       </Head>
 
       <LegalHeader />
 
       <div className="legal-container">
-        <h1>Safety on WhosUp</h1>
+        <h1>Safety on weup</h1>
 
         <p>
           We are committed to maintaining a safe and responsible environment.

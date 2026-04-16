@@ -1,0 +1,45 @@
+.messages-container {
+  padding: 20px;
+  color: var(--text);
+}
+
+.messages-header h1 {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.messages-search {
+  width: 100%;
+  padding: 10px;
+  background: var(--surface);
+  border-radius: 10px;
+  color: white;
+  margin-bottom: 15px;
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conversation-item {
+  padding: 12px;
+  background: var(--surface);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.conversation-item:hover {
+  background: var(--surface-2);
+}
+
+.conversation-title {
+  font-weight: bold;
+}
+
+.conversation-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}

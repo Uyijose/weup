@@ -5,16 +5,16 @@ export default function Careers() {
   return (
     <div className="legal-page">
       <Head>
-        <title>Careers at WhosUp</title>
+        <title>Careers at weup</title>
       </Head>
 
       <LegalHeader />
 
       <div className="legal-container">
-        <h1>Careers at WhosUp</h1>
+        <h1>Careers at weup</h1>
 
         <p>
-          WhosUp is building the future of short-form video discovery, connecting
+          weup is building the future of short-form video discovery, connecting
           creators and audiences worldwide.
         </p>
         <p>

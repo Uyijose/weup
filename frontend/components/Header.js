@@ -83,9 +83,9 @@ const Header = ({ mobileMenu = false, setMobileMenu = () => {} }) => {
             <img
               className="logo"
               onClick={() => router.push("/")}
-              src="https://res.cloudinary.com/djfjuy99t/image/upload/e_background_removal/f_png/v1771442418/whosup-icon_ykirb1.jpg"
-              // src="https://res.cloudinary.com/djfjuy99t/image/upload/e_background_removal/f_png/v1771442418/whosup-icon_ykirb1.jpg"
-              alt="whosup"
+              src="https://res.cloudinary.com/djfjuy99t/image/upload/e_background_removal/f_png/v1771442418/weup-icon_ykirb1.jpg"
+              // src="https://res.cloudinary.com/djfjuy99t/image/upload/e_background_removal/f_png/v1771442418/weup-icon_ykirb1.jpg"
+              alt="weup"
             />
           </motion.div>
           <motion.div

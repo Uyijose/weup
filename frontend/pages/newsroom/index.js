@@ -5,15 +5,15 @@ export default function Newsroom() {
   return (
     <div className="legal-page">
       <Head>
-        <title>WhosUp Newsroom</title>
+        <title>weup Newsroom</title>
       </Head>
 
       <LegalHeader />
 
       <div className="legal-container">
-        <h1>WhosUp Newsroom</h1>
+        <h1>weup Newsroom</h1>
 
-        <p>Welcome to the official newsroom for WhosUp.</p>
+        <p>Welcome to the official newsroom for weup.</p>
 
         <ul>
           <li>New product features</li>

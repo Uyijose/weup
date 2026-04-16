@@ -32,20 +32,20 @@ const User = () => {
         <title>
           {authUser
             ? authUser.full_name
-              ? `${authUser.full_name} | WhosUp`
-              : `${authUser.username} | WhosUp`
-            : "WhosUp"}
+              ? `${authUser.full_name} | weup`
+              : `${authUser.username} | weup`
+            : "weup"}
         </title>
         <meta
           name="description"
-          content="WhosUp is a modern short-form video platform for discovering and sharing viral moments from creators around the world."
+          content="weup is a modern short-form video platform for discovering and sharing viral moments from creators around the world."
         />
         <link
           rel="icon"
           href="https://th.bing.com/th/id/R.67bc88bb600a54112e8a669a30121273?rik=vsc22vMfmcSGfg&pid=ImgRaw&r=0"
         />
       </Head>
-      {console.log("Page title set to:", authUser?.full_name || authUser?.username || "WhosUp")}
+      {console.log("Page title set to:", authUser?.full_name || authUser?.username || "weup")}
 
       <Header
         mobileMenu={mobileMenu}

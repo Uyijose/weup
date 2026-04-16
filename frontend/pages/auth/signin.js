@@ -139,7 +139,7 @@ const Signin = () => {
   return (
     <div className="auth-container">
       <Head>
-        <title>Sign In - WhosUp</title>
+        <title>Sign In - weup</title>
       </Head>
 
       <motion.div

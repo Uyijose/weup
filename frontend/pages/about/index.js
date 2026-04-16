@@ -5,16 +5,16 @@ export default function About() {
   return (
     <div className="legal-page">
       <Head>
-        <title>About WhosUp</title>
+        <title>About weup</title>
       </Head>
 
       <LegalHeader />
 
       <div className="legal-container">
-        <h1>About WhosUp</h1>
+        <h1>About weup</h1>
 
         <p>
-          WhosUp is a modern short-form video platform built for discovering and
+          weup is a modern short-form video platform built for discovering and
           sharing viral moments from around the internet.
         </p>
 
@@ -25,7 +25,7 @@ export default function About() {
         </p>
 
         <p>
-          WhosUp focuses on quick, entertaining clips designed for fast
+          weup focuses on quick, entertaining clips designed for fast
           discovery and easy viewing.
         </p>
 
@@ -39,7 +39,7 @@ export default function About() {
           viral culture.
         </p>
 
-        <p>Visit us at https://whosup.fun</p>
+        <p>Visit us at https://weup.fun</p>
       </div>
     </div>
   );

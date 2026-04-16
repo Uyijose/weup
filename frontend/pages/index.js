@@ -2,10 +2,10 @@ import Explore from "./explore/index";
 import Head from "next/head";
 
 export default function Home() {
-  const siteTitle = "WhosUp - Discover Viral Videos";
-  const siteDescription = "Watch, share, and discover trending short videos on WhosUp.";
-  const siteUrl = "https://www.whosup.fun/";
-  const siteImage = "https://whosup.fun/whosup-icon.PNG";
+  const siteTitle = "weup - Discover Viral Videos";
+  const siteDescription = "Watch, share, and discover trending short videos on weup.";
+  const siteUrl = "https://www.weup.fun/";
+  const siteImage = "https://weup.fun/weup-icon.PNG";
   return (
     <>
       <Head>
@@ -19,7 +19,7 @@ export default function Home() {
         <meta property="og:title" content={siteTitle} />
         <meta property="og:description" content={siteDescription} />
         <meta property="og:url" content={siteUrl} />
-        <meta property="og:site_name" content="WhosUp" />
+        <meta property="og:site_name" content="weup" />
         <meta property="og:image" content={siteImage} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />

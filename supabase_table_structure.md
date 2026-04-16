@@ -1,4 +1,4 @@
-# Supabase Table Structure for whosUp
+# Supabase Table Structure for weup
 
 ## 1. users table
 **Purpose:** store user account info, profile, and avatar

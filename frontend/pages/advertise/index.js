@@ -5,13 +5,13 @@ export default function Advertise() {
   return (
     <div className="legal-page">
       <Head>
-        <title>Advertise on WhosUp</title>
+        <title>Advertise on weup</title>
       </Head>
 
       <LegalHeader />
 
       <div className="legal-container">
-        <h1>Advertise on WhosUp</h1>
+        <h1>Advertise on weup</h1>
 
         <ul>
           <li>Display banner ads</li>
@@ -20,7 +20,7 @@ export default function Advertise() {
           <li>Sponsored content campaigns</li>
         </ul>
 
-        <p>Advertising inquiries: ads@whosup.fun</p>
+        <p>Advertising inquiries: ads@weup.fun</p>
       </div>
     </div>
   );

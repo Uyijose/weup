@@ -12,6 +12,7 @@ import likesRoutes from "./routes/likes/likes.routes.js";
 import postsRoutes from "./routes/posts/posts.routes.js";
 import reportsRoutes from "./routes/reports/reports.routes.js";
 import reportsAdminRoutes from "./routes/reports/reports.admin.routes.js";
+import messagingRoutes from "./routes/messaging/messaging.routes.js";
 
 const app = express();
 
@@ -34,6 +35,8 @@ app.use("/api/likes", likesRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/admin/reports", reportsAdminRoutes);
+app.use("/api/messaging", messagingRoutes);
+
 
 export default app;
 

@@ -26,7 +26,7 @@ dist/
 .env.*
 .env*.local
 *.pem
-google_whosup-client-secret.json
+google_weup-client-secret.json
 
 # =========================
 # Logs & Debug

@@ -11,8 +11,8 @@ const Create = () => {
   return (
     <>
       <Head>
-        <title>WhosUp</title>
-        <meta name="description" content="WhosUp is a modern short-form video platform for discovering and sharing viral moments from creators around the world." />
+        <title>weup</title>
+        <meta name="description" content="weup is a modern short-form video platform for discovering and sharing viral moments from creators around the world." />
         <link
           rel="icon"
           href="https://th.bing.com/th/id/R.67bc88bb600a54112e8a669a30121273?rik=vsc22vMfmcSGfg&pid=ImgRaw&r=0"

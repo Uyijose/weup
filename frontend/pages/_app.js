@@ -27,7 +27,6 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useRouter } from 'next/router';
 import { useAuthStore } from "../stores/authStore";
-import { supabase } from "../utils/supabaseClient";
 import Script from 'next/script';
 import * as gtag from '../utils/gtag';
 

@@ -5,13 +5,19 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 ```
 ├── backend
 │   ├── src
+│   │   ├── controller
+│   │   ├── lib
+│   │   │   └── supabase.js
 │   │   ├── middleware
+│   │   │   ├── auth.middleware-old.js
 │   │   │   └── auth.middleware.js
 │   │   ├── routes
 │   │   │   ├── comments
 │   │   │   │   └── comments.routes.js
 │   │   │   ├── likes
 │   │   │   │   └── likes.routes.js
+│   │   │   ├── messaging
+│   │   │   │   └── messaging.routes.js
 │   │   │   ├── posts
 │   │   │   │   └── posts.routes.js
 │   │   │   ├── reports
@@ -23,8 +29,24 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   ├── upload.routes.js
 │   │   │   └── video.routes.js
 │   │   ├── scripts
-│   │   │   └── generateThumbnails.js
+│   │   │   ├── json
+│   │   │   │   ├── postsReport.json
+│   │   │   │   └── usersReport.json
+│   │   │   ├── chat_cyce-old.js
+│   │   │   ├── chat_cyce.js
+│   │   │   ├── chat_uyee-old.js
+│   │   │   ├── chat_uyee.js
+│   │   │   ├── generateLikes.js
+│   │   │   ├── generatePostsReport.js
+│   │   │   ├── generateSubscriptions.js
+│   │   │   ├── generateThumbnails.js
+│   │   │   └── generateUsersReport.js
 │   │   ├── services
+│   │   │   ├── messaging
+│   │   │   │   ├── conversations.service.js
+│   │   │   │   ├── messages.service.js
+│   │   │   │   ├── presence.service.js
+│   │   │   │   └── reactions.service.js
 │   │   │   ├── r2.service.js
 │   │   │   ├── supabase.service.js
 │   │   │   ├── video.service-fast-old.js
@@ -33,7 +55,6 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   └── env.js
 │   │   ├── app.js
 │   │   └── server.js
-│   ├── tmp
 │   ├── .env-fake
 │   ├── package-lock.json
 │   ├── package.json
@@ -79,6 +100,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   ├── BecomeCreator.css
 │   │   │   ├── BecomeCreatorModal.css
 │   │   │   ├── commentModal.css
+│   │   │   ├── createVideo-new.css
 │   │   │   ├── createVideo.css
 │   │   │   ├── CreatorList.css
 │   │   │   ├── CreatorProfile.css
@@ -100,6 +122,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── BecomeCreatorModal.js
 │   │   ├── Btns.js
 │   │   ├── Comments.js
+│   │   ├── CreateVideo-new.js
 │   │   ├── CreateVideo.js
 │   │   ├── CustomPosts.js
 │   │   ├── Header.js
@@ -107,6 +130,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── Like.js
 │   │   ├── Links.js
 │   │   ├── ModalPortal.js
+│   │   ├── Post-old.js
 │   │   ├── Post.js
 │   │   ├── RightHandSide.js
 │   │   ├── SwipeUpHint.js
@@ -129,9 +153,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── advertise
 │   │   │   └── index.js
 │   │   ├── api
-│   │   │   ├── deletePost-old.js
 │   │   │   ├── hello.js
-│   │   │   ├── signup-old.js
 │   │   │   └── signup.js
 │   │   ├── auth
 │   │   │   ├── google-callback-old.js
@@ -175,6 +197,8 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── upload
 │   │   │   └── create.js
 │   │   ├── user
+│   │   │   ├── [id]
+│   │   │   │   └── videos.js
 │   │   │   └── [id].js
 │   │   ├── _app.js
 │   │   ├── ads.js
@@ -200,12 +224,12 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── video-ads.html
 │   │   └── whosup-icon.PNG
 │   ├── stores
-│   │   ├── authStore-old.js
 │   │   ├── authStore.js
 │   │   ├── commentsStore.js
 │   │   ├── likesStore.js
 │   │   ├── postsStore.js
 │   │   ├── reportsStore.js
+│   │   ├── topicsStore.js
 │   │   ├── uploadVideoStore.js
 │   │   ├── usersStore.js
 │   │   └── watchedHistoryStore.js
@@ -224,12 +248,26 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── package.json
 │   ├── postcss.config.js
 │   └── tailwind.config.js
-├── touch
+├── migration
+│   ├── supabase
+│   │   ├── .temp
+│   │   │   ├── cli-latest
+│   │   │   ├── gotrue-version
+│   │   │   ├── linked-project.json
+│   │   │   ├── pooler-url
+│   │   │   ├── postgres-version
+│   │   │   ├── project-ref
+│   │   │   ├── rest-version
+│   │   │   ├── storage-migration
+│   │   │   └── storage-version
+│   │   ├── migrations
+│   │   │   ├── 20260409034358_remote_schema.sql
+│   │   │   └── 20260409123239_remote_schema.sql
+│   │   └── config.toml
+│   └── readme.md
 ├── .gitignore
 ├── chatgpt-query.txt
 ├── db_sql_command.md
-├── google_whosup-client-secret.json
-├── LICENSE
 ├── PROJECT_STRUCTURE.md
 ├── project_tree_cleaner.py
 ├── README.md

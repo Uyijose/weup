@@ -76,7 +76,7 @@ const Signup = () => {
   return (
     <div className="auth-container">
       <Head>
-        <title>Sign Up - WhosUp</title>
+        <title>Sign Up - weup</title>
       </Head>
 
       <div className="auth-card">

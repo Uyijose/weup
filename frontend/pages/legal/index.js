@@ -5,24 +5,24 @@ export default function LegalPage() {
   return (
     <div className="legal-page">
       <Head>
-        <title>WhosUp | Privacy & Terms</title>
+        <title>weup | Privacy & Terms</title>
         <meta
           name="description"
-          content="WhosUp Privacy Policy and Terms of Service"
+          content="weup Privacy Policy and Terms of Service"
         />
       </Head>
 
       <LegalHeader />
 
       <div className="legal-container">
-        <h1>WhosUp Platform Legal Policies</h1>
+        <h1>weup Platform Legal Policies</h1>
         <p className="legal-updated">Last Updated: 2026-03-12</p>
 
         {/* PRIVACY POLICY */}
         <section>
           <h2>1. Privacy Policy</h2>
           <p>
-            WhosUp (whosup.fun) respects the privacy of its users. This Privacy
+            weup (weup.fun) respects the privacy of its users. This Privacy
             Policy explains how information is collected, used, and protected.
           </p>
 
@@ -42,7 +42,7 @@ export default function LegalPage() {
 
           <h3>Analytics & Advertising</h3>
           <p>
-            WhosUp may use third-party analytics and advertising services. These
+            weup may use third-party analytics and advertising services. These
             services may use cookies or similar technologies.
           </p>
 
@@ -74,14 +74,14 @@ export default function LegalPage() {
 
           <h3>User-Generated Content</h3>
           <p>
-            Users retain ownership of content they upload but grant WhosUp a
+            Users retain ownership of content they upload but grant weup a
             non-exclusive license to display, distribute, and promote the
             content.
           </p>
 
           <h3>Account Suspension</h3>
           <p>
-            WhosUp reserves the right to remove content or suspend accounts that
+            weup reserves the right to remove content or suspend accounts that
             violate platform policies.
           </p>
         </section>
@@ -116,8 +116,8 @@ export default function LegalPage() {
         {/* CONTACT */}
         <section>
           <h2>5. Contact Information</h2>
-          <p>Email: contact@whosup.fun</p>
-          <p>Website: https://whosup.fun</p>
+          <p>Email: contact@weup.fun</p>
+          <p>Website: https://weup.fun</p>
         </section>
       </div>
     </div>

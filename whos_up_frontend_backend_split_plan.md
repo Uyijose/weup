@@ -1,6 +1,6 @@
-# WhosUp Frontend & Backend Split Plan
+# weup Frontend & Backend Split Plan
 
-This document describes how to split the WhosUp project into a **frontend (Vercel)** and **backend (Render)** architecture using **Supabase** and **Cloudflare R2**.
+This document describes how to split the weup project into a **frontend (Vercel)** and **backend (Render)** architecture using **Supabase** and **Cloudflare R2**.
 
 ---
 
@@ -22,7 +22,7 @@ This document describes how to split the WhosUp project into a **frontend (Verce
 ## 2. Root Structure
 
 ```bash
-whosup/
+weup/
 ├── frontend/
 ├── backend/
 ```
@@ -104,7 +104,7 @@ frontend/
 ```env
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_API_BASE_URL=https://whosup-backend.onrender.com
+NEXT_PUBLIC_API_BASE_URL=https://weup-backend.onrender.com
 ```
 
 ---
@@ -142,7 +142,7 @@ SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 R2_ACCESS_KEY_ID=...
 R2_SECRET_ACCESS_KEY=...
-R2_BUCKET_NAME=whosup
+R2_BUCKET_NAME=weup
 R2_ENDPOINT=...
 R2_PUBLIC_URL=...
 ```
@@ -153,7 +153,7 @@ R2_PUBLIC_URL=...
 
 ```json
 {
-  "name": "whosup-backend",
+  "name": "weup-backend",
   "type": "module",
   "scripts": {
     "start": "node src/server.js"

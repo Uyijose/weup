@@ -14,7 +14,7 @@ export default function Developers() {
         <h1>Developers</h1>
 
         <p>
-          WhosUp is working toward building APIs and integration tools.
+          weup is working toward building APIs and integration tools.
         </p>
 
         <ul>

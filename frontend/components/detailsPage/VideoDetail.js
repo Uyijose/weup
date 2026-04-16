@@ -239,14 +239,14 @@ const VideoDetail = ({
     if (video.includes("firebasestorage.googleapis.com")) {
       const chekerUrl = video.replace(
         "firebasestorage.googleapis.com",
-        "whosup.com"
+        "weup.com"
       );
       setVideoLink(chekerUrl);
     } else if (video.includes("drive.google.com")) {
-      const chekerUrl = video.replace("drive.google.com", "whosup.com");
+      const chekerUrl = video.replace("drive.google.com", "weup.com");
       setVideoLink(chekerUrl);
     } else if (video.includes("mega.nz/embed")) {
-      const chekerUrl = video.replace("mega.nz/embed", "whosup.com");
+      const chekerUrl = video.replace("mega.nz/embed", "weup.com");
       setVideoLink(chekerUrl);
     }
   }, [video]);

@@ -66,7 +66,7 @@ const SearchPage = () => {
                 key={post.id}
                 className="post-item"
                 onClick={() => {
-                  window.location.href = `https://www.whosup.fun/posts/${post.id}`;
+                  window.location.href = `https://www.weup.fun/posts/${post.id}`;
                 }}
               >
                 <video

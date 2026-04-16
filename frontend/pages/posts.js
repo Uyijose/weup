@@ -10,7 +10,7 @@ export default function Posts() {
   return (
     <div>
       <Head>
-        <title>WhosUp - Posts</title>
+        <title>weup - Posts</title>
         <meta name="description" content="All posts feed" />
         <link
           rel="icon"

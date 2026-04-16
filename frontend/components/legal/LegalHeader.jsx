@@ -5,7 +5,7 @@ export default function LegalHeader() {
     <header className="legal-header">
       <div className="legal-header-inner">
         <Link href="/">
-          <span className="legal-logo">WhosUp</span>
+          <span className="legal-logo">weup</span>
         </Link>
 
         <nav className="legal-nav">

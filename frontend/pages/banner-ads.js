@@ -39,10 +39,10 @@ const BannerAdsPage = () => {
   return (
     <>
       <Head>
-        <title>Banner Ads | WhosUp</title>
+        <title>Banner Ads | weup</title>
         <meta
           name="description"
-          content="Banner ad content on WhosUp"
+          content="Banner ad content on weup"
         />
       </Head>
 

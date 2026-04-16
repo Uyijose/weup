@@ -1,4 +1,4 @@
-# WhosUp Ads Frontend Integration Guide
+# weup Ads Frontend Integration Guide
 
 This document explains exactly which frontend files must be updated to
 integrate each ad type.

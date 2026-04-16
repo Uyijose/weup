@@ -1,4 +1,4 @@
-# Whosup Ads System
+# weup Ads System
 
 This document explains all supported ad types and how they behave across the platform.
 
