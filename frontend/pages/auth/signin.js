@@ -74,47 +74,6 @@ const Signin = () => {
     setLoading(false);
   };
 
-
-// const Signin = () => {
-//   const router = useRouter();
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [loading, setLoading] = useState(false);
-//   const [loadingType, setLoadingType] = useState("");
-//   const [error, setError] = useState("");
-
-//   // ✅ Email + Password Sign In
-//   const signInWithEmail = async () => {
-//     setLoading(true);
-//     setLoadingType("email");
-//     setError("");
-
-//     if (!email || !password) {
-//       setError("Please enter email and password");
-//       setLoading(false);
-//       return;
-//     }
-
-//     try {
-//       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/signin`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ email, password }),
-//       });
-
-//       const data = await res.json();
-//       if (!res.ok) throw new Error(data.error || "Signin failed");
-//       localStorage.setItem("access_token", data.access_token);
-
-//       router.push("/explore");
-//     } catch (err) {
-//       console.log("Signin error frontend:", err.message);
-//       setError(err.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
   // ✅ Google OAuth Sign In
   const signInWithGoogle = async () => {
     setLoading(true);
@@ -197,7 +156,7 @@ const Signin = () => {
           {loading && loadingType === "email" ? "Signing in..." : "Sign In"}
         </button>
 
-        <div className="divider">or</div>
+        {/* <div className="divider">or</div>
 
         <button
           className="google-btn"
@@ -207,7 +166,7 @@ const Signin = () => {
           {loading && loadingType === "google"
             ? "Connecting to Google..."
             : "Continue with Google"}
-        </button>
+        </button> */}
         <p>
           Don&apos;t have an account?{" "}
           <Link href="/auth/signup">Register here</Link>

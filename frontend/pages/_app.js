@@ -68,19 +68,6 @@ function MyApp({ Component, pageProps }) {
     checkAgeGate();
   }, [loading, user]);
 
-  const handleAgeSubmit = async () => {
-    if (selectedAnswer === null) {
-      alert("Please select an option");
-      return;
-    }
-
-    if (!selectedAnswer) {
-      window.location.href = "https://www.google.com";
-      return;
-    }
-
-    await confirmAdult();
-  };
 
   // Track page views on route change
   useEffect(() => {
