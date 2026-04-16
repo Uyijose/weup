@@ -18,9 +18,9 @@ const Tags = () => {
   return (
     <div className="tags pb-6 mt-10 ml-8 w-[90%] border-t border-[#7A00F4]">
      
-      <div className="native-ad mt-4 w-full flex justify-center">
+      {/* <div className="native-ad mt-4 w-full flex justify-center">
         <div id="container-784e727a328c0c9ed4fa05f9131d6916"></div>
-      </div>
+      </div> */}
     </div>
   );
 };

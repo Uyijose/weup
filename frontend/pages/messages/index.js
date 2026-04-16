@@ -15,9 +15,34 @@ export default function MessagesPage() {
 
   const [search, setSearch] = useState("");
 
+  const { user: authUser, loading: authLoading } = useAuthStore();
+
   useEffect(() => {
+    console.log("[MESSAGES] auth check running", {
+      user: authUser,
+      loading: authLoading
+    });
+
+    if (authLoading) return;
+
+    if (!authUser) {
+      console.log("[MESSAGES] no user found → redirecting to login");
+      alert("You must be logged in to access Messages");
+
+      router.replace("/auth/signin");
+    }
+  }, [authUser, authLoading, router]);
+
+
+  useEffect(() => {
+    if (!user) {
+      console.log("[MESSAGES] blocked loadConversations - no user");
+      return;
+    }
+
+    console.log("[MESSAGES] loading conversations for user", user.id);
     loadConversations();
-  }, []);
+  }, [user]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -25,6 +50,18 @@ export default function MessagesPage() {
       c.title?.toLowerCase().includes(q)
     );
   }, [conversations, search]);
+
+  if (!authUser) {
+    console.log("[MESSAGES] rendering blocked UI - no auth");
+
+    return (
+      <div style={{ padding: 20, color: "white", background: "#000", minHeight: "100vh" }}>
+        <h2>You must be logged in to view messages</h2>
+        <p>Redirecting...</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="messages-container">
