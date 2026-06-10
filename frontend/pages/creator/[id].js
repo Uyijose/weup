@@ -253,7 +253,7 @@ const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
                   handleMessageClick();
                 }}
               >
-                Messages
+                {authUser.id === creatorData.id ? "Messages" : "Send Message"}
               </button>
             )}
           </div>
