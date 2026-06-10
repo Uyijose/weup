@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import avatarFallback from "./assets/avatar-fallback.jpg";
-import VideoModal from "./VideoModal";
 import BecomeCreatorModal from "./BecomeCreatorModal";
 import { useAuthStore } from "../stores/authStore";
 import { useUsersStore } from "../stores/usersStore";
@@ -20,7 +19,6 @@ const UserProfile = () => {
   const [showCreatorModal, setShowCreatorModal] = useState(false);
   const isAdmin = authUser?.is_admin === true;
   const isOwner = authUser && userData && String(authUser.id) === String(userData.id);
-  const [selectedVideo, setSelectedVideo] = useState(null);
 
   const [pageVideos, setPageVideos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,10 +36,6 @@ const UserProfile = () => {
   
   useEffect(() => {
     if (authUser && userData && !isOwner && !isAdmin) {
-      console.log("Unauthorized access attempt:", {
-        profileId: userData.id,
-        authUser: authUser.id
-      });
       alert("You can't view another user's page.");
       if (typeof window !== "undefined") {
         window.location.href = "/";
@@ -57,12 +51,6 @@ const UserProfile = () => {
     if (!router.query.id) return;
     fetchUserById(router.query.id);
   }, [router.query.id]);
-  console.log("UserProfile render:", {
-    profileId: router.query.id,
-    authUser: authUser?.id,
-    isOwner,
-    isAdmin
-  });
 
   useEffect(() => {
     if (!userData?.id) return;
@@ -114,7 +102,6 @@ const UserProfile = () => {
           <button
             className="admin-btn"
             onClick={() => {
-              console.log("Admin accessing dashboard");
               router.push("/admin/dashboard");
             }}
           >
@@ -125,7 +112,6 @@ const UserProfile = () => {
           <button
             className="user-edit-btn"
             onClick={() => {
-              console.log("Owner editing profile");
               router.push(`/profile/edit`);
             }}
           >
@@ -136,7 +122,6 @@ const UserProfile = () => {
           <button
             className="creator-btn"
             onClick={() => {
-              console.log("Accessing creator page");
               router.push(`/creator/${userData.creator_username}`);
             }}
           >
@@ -181,14 +166,28 @@ const UserProfile = () => {
                 onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
                 onClick={() => {
-                  console.log("OPEN MODAL VIDEO", video.id);
-                  setSelectedVideo(video);
+                  const isPartVideo =
+                    !!video.parent_post_id || !!video.part_number || !!video.video_part_id;
+
+                  const postId = video.parent_post_id || video.post_id || video.id;
+
+                  const part = video.part_number || video.part || 1;
+
+                  const query = new URLSearchParams();
+
+                  query.set("feed", "watched");
+
+                  if (isPartVideo) {
+                    query.set("part", part);
+                  }
+
+                  const finalUrl = `/posts/${postId}?${query.toString()}`;
+                  router.push(finalUrl);
                 }}
               />
               <div className="user-video-caption">
                 {(() => {
                   const caption = video.caption || "No caption available";
-                  console.log("USER VIDEO CAPTION:", { id: video.id, caption });
                   return caption.length > 22 ? caption.slice(0, 22) + "..." : caption;
                 })()}
               </div>
@@ -199,7 +198,6 @@ const UserProfile = () => {
               <button
                 className="user-see-all-videos-btn"
                 onClick={() => {
-                  console.log("OPEN USER FULL VIDEO PAGE", userData.id);
                   router.push(`/user/${userData.id}/videos`);
                 }}
               >
@@ -263,12 +261,6 @@ const UserProfile = () => {
         onClose={() => {
           setShowCreatorModal(false);
         }}
-      />
-    )}
-    {selectedVideo && (
-      <VideoModal
-        videoData={selectedVideo}
-        onClose={() => setSelectedVideo(null)}
       />
     )}
   </motion.div>

@@ -1,62 +1,65 @@
 import Head from "next/head";
-import React from "react";
+import React, { useEffect } from "react";
+import { supabase } from "../../utils/supabaseClient";
+import { useRouter } from 'next/router';
+
 import Header from "../../components/Header";
 import LeftHandSide from "../../components/LeftHandSide";
-import RightHandSide from "../../components/RightHandSide";
-import { supabase } from "../../utils/supabaseClient";
+import DetailFeed from "../../components/detailsPage/DetailFeed";
 
-const DetailsPage = ({ post }) => {
-  const title = post?.caption
-    ? `${post.caption} | weup`
-    : "Watch viral videos on weup";
+const DetailsPage = ({ ogPost }) => {
 
-  const description =
-    post?.caption ||
-    "Watch and discover viral short videos on weup.";
-
-  const videoUrl = post?.video_url || "";
-  const pageUrl = `https://weup.fun/posts/${post?.id}`;
-
+  const router = useRouter();
   return (
     <div className="detail-page-wrapper">
       <Head>
-        <title>{title}</title>
+        <title>
+          {ogPost?.caption
+            ? ogPost.caption.length > 60
+              ? ogPost.caption.slice(0, 60) + "..."
+              : ogPost.caption
+            : "Post | WeUp"}
+        </title>
+        <meta property="og:site_name" content="WeUp" />
 
-        <meta name="description" content={description} />
+        <meta property="og:title" content="WeUp Posts" />
 
-        <meta property="og:type" content="website" />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={description} />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image:alt" content={post?.caption || "weup posts"} />
-        <meta property="og:site_name" content="weup" />
+        <meta
+          property="og:description"
+          content={ogPost?.caption || "Watch this video on WeUp"}
+        />
 
         <meta
           property="og:image"
-          content={post?.thumbnail_url || "https://weup.fun/default-preview.jpg"}
+          content={ogPost?.thumbnail_url || "https://whosup.fun/whosup-icon.PNG"}
         />
-
-        <meta
-          property="og:image:secure_url"
-          content={post?.thumbnail_url || "https://weup.fun/default-preview.jpg"}
-        />
-
-        <meta property="og:image:type" content="image/jpeg" />
 
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/png" />
+
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={title} />
-        <meta name="twitter:description" content={description} />
+        <meta
+          name="twitter:title"
+          content="WeUp Posts"
+        />
+        <meta
+          name="twitter:description"
+          content={ogPost?.caption || "Watch this video on WeUp"}
+        />
         <meta
           name="twitter:image"
-          content={post?.thumbnail_url || "https://weup.fun/default-preview.jpg"}
+          content={ogPost?.thumbnail_url || "https://whosup.fun/whosup-icon.PNG"}
         />
 
-        <meta name="twitter:image:src" content={post?.thumbnail_url} />
+        <meta
+          name="description"
+          content="WeUp is a modern short-form video platform for discovering and sharing viral moments from creators around the world."
+        />
+
         <link
           rel="icon"
-          href="https://th.bing.com/th/id/R.67bc88bb600a54112e8a669a30121273?rik=vsc22vMfmcSGfg&pid=ImgRaw&r=0"
+          href="https://whosup.fun/favicon.ico"
         />
       </Head>
 
@@ -64,27 +67,48 @@ const DetailsPage = ({ post }) => {
 
       <main>
         <LeftHandSide />
-        <RightHandSide />
+
+        <div className="right">
+          <DetailFeed />
+        </div>
       </main>
     </div>
   );
 };
 
-export async function getServerSideProps({ params }) {
-  const { data, error } = await supabase
-    .from("posts")
-    .select("*")
-    .eq("id", params.id)
-    .single();
+export default DetailsPage;
 
-  if (error || !data) {
-    return { notFound: true };
+export async function getServerSideProps(context) {
+  const { id } = context.params;
+  const { data: post, error: postError } = await supabase
+    .from("posts")
+    .select("id, caption, thumbnail_url")
+    .eq("id", id)
+    .single();
+  const partNumber = context.query.part ? Number(context.query.part) : null;
+  let finalCaption = post?.caption || null;
+
+  if (partNumber) {
+    const { data: videoPart, error: partError } = await supabase
+      .from("video_parts")
+      .select("part_number")
+      .eq("post_id", id)
+      .eq("part_number", partNumber)
+      .single();
+    if (videoPart?.part_number && finalCaption) {
+      finalCaption = `${finalCaption} (part ${videoPart.part_number})`;
+    }
   }
+  let caption = post?.caption || null;
+
   return {
     props: {
-      post: data,
+      ogPost: post
+        ? {
+            ...post,
+            caption: finalCaption
+          }
+        : null,
     },
   };
 }
-
-export default DetailsPage;

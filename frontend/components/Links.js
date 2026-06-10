@@ -75,7 +75,7 @@ const Links = () => {
       ))}
 
       <div className="copyright">
-        <h6>&copy; {moment().format("YYYY")} weup</h6>
+        <h6>&copy; {moment().format("YYYY")}WeUp</h6>
       </div>
 
       {showCreatorModal && (

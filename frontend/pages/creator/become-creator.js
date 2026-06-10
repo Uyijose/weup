@@ -16,21 +16,13 @@ const BecomeCreator = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      console.log("Checking auth for become creator page");
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
-
-      console.log("Become creator page user:", user);
-
       if (!user) {
-        console.log("No authenticated user found, redirecting to signin");
         router.replace("/auth/signin");
         return;
       }
-
-      console.log("Authenticated user allowed on become creator page");
       setPageLoading(false);
     };
 
@@ -65,7 +57,6 @@ const BecomeCreator = () => {
     }
 
     if (creatorUsername.length > 20) {
-      console.log("Creator username exceeds max length:", creatorUsername.length);
       alert("Creator username cannot exceed 20 characters");
       return;
     }
@@ -89,9 +80,7 @@ const BecomeCreator = () => {
     let creatorAvatarUrl = null;
 
     if (creatorAvatarFile) {
-      console.log("Uploading creator avatar to R2...");
       creatorAvatarUrl = await uploadImage(creatorAvatarFile);
-      console.log("Creator avatar uploaded:", creatorAvatarUrl);
     }
 
     const { error: insertError } = await supabase
@@ -128,8 +117,6 @@ const BecomeCreator = () => {
   };
 
   if (pageLoading) {
-    console.log("Become creator page still loading auth state");
-
     return (
       <div className="creator-page-container">
         <div className="creator-page-card">
@@ -164,7 +151,6 @@ const BecomeCreator = () => {
             onChange={(e) => {
               const file = e.target.files[0];
               if (!file) return;
-              console.log("Creator avatar selected:", file.name);
               setCreatorAvatarFile(file);
               setCreatorAvatarPreview(URL.createObjectURL(file));
             }}
@@ -180,11 +166,9 @@ const BecomeCreator = () => {
             onChange={(e) => {
               let value = e.target.value.replace(/\s+/g, "_");
               if (value.length > 20) {
-                console.log("Username too long:", value.length);
                 value = value.slice(0, 20);
                 alert("Creator username cannot exceed 20 characters");
               }
-              console.log("Creator username updated:", value);
               setCreatorUsername(value);
             }}
           />

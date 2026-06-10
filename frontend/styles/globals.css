@@ -66,8 +66,11 @@ input {
 
 html, body {
   height: 100%;
-  overflow: hidden;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
+
 /* =========================================================
    BODY
 ========================================================= */

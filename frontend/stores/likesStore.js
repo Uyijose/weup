@@ -4,14 +4,17 @@ import { getAuthToken } from "../utils/getAuthToken.js";
 export const useLikesStore = create((set, get) => ({
   likesMap: {},
 
-  fetchLikeState: async (postId, isVideoPart) => {
+  fetchLikeState: async (id, isVideoPart) => {
+
     const token = await getAuthToken();
-    if (!token) return;
+    if (!token) {
+      return;
+    }
 
     const column = isVideoPart ? "video_part_id" : "post_id";
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/likes/state?${column}=${postId}`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/likes/state?${column}=${id}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -21,7 +24,7 @@ export const useLikesStore = create((set, get) => ({
     set(state => ({
       likesMap: {
         ...state.likesMap,
-        [postId]: {
+        [id]: {
           hasLiked: data.hasLiked,
           likeId: data.likeId,
         }
@@ -29,24 +32,27 @@ export const useLikesStore = create((set, get) => ({
     }));
   },
 
-  toggleLike: async (postId, isVideoPart) => {
+  toggleLike: async (id, isVideoPart) => {
     const token = await getAuthToken();
-    if (!token) return null;
+    if (!token) {
+      return null;
+    }
 
-    const current = get().likesMap[postId];
+    const current = get().likesMap[id];
     const hasLiked = current?.hasLiked;
+
     const postsStore = require("./postsStore.js").usePostsStore.getState();
-    const currentPost = postsStore.postsMap[postId];
+    const currentPost = postsStore.postsMap[id];
     const currentCount = currentPost?.likes_count ?? 0;
 
     const newCount = hasLiked ? currentCount - 1 : currentCount + 1;
-    postsStore.updateLikesCount(postId, newCount);
+    postsStore.updateLikesCount(id, newCount);
 
     set(state => ({
       likesMap: {
         ...state.likesMap,
-        [postId]: {
-          ...state.likesMap[postId],
+        [id]: {
+          ...state.likesMap[id],
           hasLiked: !hasLiked,
         }
       }
@@ -61,14 +67,14 @@ export const useLikesStore = create((set, get) => ({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          post_id: isVideoPart ? null : postId,
-          video_part_id: isVideoPart ? postId : null,
+          post_id: isVideoPart ? null : id,
+          video_part_id: isVideoPart ? id : null,
         }),
       }
     );
 
     const data = await res.json();
-    await get().fetchLikeState(postId, isVideoPart);
+    await get().fetchLikeState(id, isVideoPart);
 
     return data;
   }

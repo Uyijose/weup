@@ -8,10 +8,8 @@ import { useUploadVideoStore } from "../stores/uploadVideoStore";
 import { useTopicsStore } from "../stores/topicsStore";
 
 const CreateVideo = () => {
-  const { user } = useAuthStore();
   const router = useRouter();
   const { topics, fetchTopics } = useTopicsStore();
-  const [redirecting, setRedirecting] = useState(false);
 
   const {
     caption,
@@ -21,12 +19,15 @@ const CreateVideo = () => {
     loading,
     uploadProgress,
     uploadMessage,
+    redirecting,
     setCaption,
     setTopic,
     setSelectedFile,
     handlePost,
     resetUpload
   } = useUploadVideoStore();
+
+  const { user, loading: authLoading, hydrating } = useAuthStore();
 
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [customTopicInput, setCustomTopicInput] = useState("");
@@ -80,16 +81,39 @@ const CreateVideo = () => {
   };
 
   useEffect(() => {
-    if (loading) return;
+    console.log("[AUTH GUARD CHECK]", {
+      user,
+      authLoading,
+      hydrating,
+      path: router.pathname
+    });
+
+    if (!router.isReady) {
+      console.log("[AUTH GUARD] router not ready");
+      return;
+    }
+
+    if (authLoading || hydrating) {
+      console.log("[AUTH GUARD] auth still loading/hydrating");
+      return;
+    }
+
+    if (router.pathname !== "/create") {
+      console.log("[AUTH GUARD] not on create page, skipping redirect logic");
+      return;
+    }
+
+    console.log("[CREATE PAGE MOUNT] resetting upload state");
+    resetUpload();
 
     if (!user) {
-      console.log("No user found, redirecting to home");
-      router.push("/");
-    } else {
-      console.log("User from store:", user.id);
+      console.log("[AUTH GUARD] no user found → redirecting home");
+      router.replace("/");
+      return;
     }
-  }, [loading, user]);
 
+    console.log("[AUTH GUARD] user confirmed:", user.id);
+  }, [user, authLoading, hydrating, router.isReady, router.pathname]);
 
   useEffect(() => {
     fetchTopics();
@@ -102,24 +126,6 @@ const CreateVideo = () => {
   return (
     <div className="create-container">
       <Toaster />
-      {redirecting && (
-        <div className="redirect-overlay fixed inset-0 z-50 flex items-center justify-center">
-          <div className="redirect-backdrop fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm"></div>
-          <div className="redirect-content z-10 flex flex-col items-center justify-center p-6 bg-[#1a0033] rounded-xl shadow-xl">
-            <p className="text-white text-3xl font-bold mb-4">Redirecting to video page...</p>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-16 h-16 animate-spin text-white"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v16h16" />
-            </svg>
-          </div>
-        </div>
-      )}
       <motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -175,6 +181,14 @@ const CreateVideo = () => {
                         URL.revokeObjectURL(video.src);
 
                         const duration = video.duration;
+
+                        console.log("[VIDEO DURATION FRONTEND]", duration);
+
+                        if (duration > 1800) {
+                          toast.error("Video must not exceed 30 minutes");
+                          return;
+                        }
+
                         if (duration > 180) {
                           toast(`Your video is ${Math.ceil(duration / 60)} mins long. It will be split into ${Math.ceil(duration / 180)} parts.`, {
                             duration: 4000,
@@ -241,11 +255,6 @@ const CreateVideo = () => {
               </div>
             </div>
           )}
-          {/* {wrongFileType && (
-            <p className="text-center text-xl text-red-400 font-semibold mt-4 w-[260px]">
-              Please select a video file (mp4 or webm or ogg)
-            </p>
-          )} */}
         </div>
         <div className="form-section">
           <label className="text-md font-medium text-[#1A0033]">Caption</label>
@@ -452,7 +461,7 @@ const CreateVideo = () => {
                 Cancel
               </button>
               <button
-                disabled={selectedFile ? redirecting : true}
+                disabled={selectedFile ? loading : true}
                 onClick={() => {
                   if (!caption || caption.trim().length < 3 ) {
                     toast.error("Caption must be at least 3 characters");
@@ -478,10 +487,7 @@ const CreateVideo = () => {
                   }
                   toast.success("Uploading your video...");
                   console.log("Start upload");
-                  handlePost(router).then(() => {
-                      console.log("Upload finished, showing redirect overlay");
-                      setRedirecting(true);
-                  });
+                  handlePost(router);
                 }}
                 type="button"
                 className="post-btn"
@@ -492,6 +498,21 @@ const CreateVideo = () => {
           )}
         </div>
       </motion.div>
+      {redirecting && (
+        <div className="redirect-overlay">
+          {console.log("[OVERLAY] redirect overlay visible")}
+          <div className="redirect-backdrop"></div>
+          <div className="redirect-content">
+            <p className="compression-text">Redirecting to your post...</p>
+            <div className="compression-bar">
+              <div
+                className="compression-progress"
+                style={{ width: "100%" }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

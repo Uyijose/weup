@@ -3,14 +3,12 @@ import Header from "../../../components/Header";
 import LeftHandSide from "../../../components/LeftHandSide";
 import { useState, useEffect } from "react";
 import { supabase } from "../../../utils/supabaseClient";
-import VideoModal from "../../../components/VideoModal";
 
 const CreatorVideosPage = ({ creator, videos }) => {
     const router = useRouter();
     const [mobileMenu, setMobileMenu] = useState(false);
     const [pageVideos, setPageVideos] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [selectedVideo, setSelectedVideo] = useState(null);
     const PAGE_SIZE = 12;
 
     console.log("CREATOR VIDEOS PAGE:", {
@@ -59,8 +57,19 @@ const CreatorVideosPage = ({ creator, videos }) => {
                             key={`page-${p}`}
                             className={`pagination-btn ${p === currentPage ? "active" : ""}`}
                             onClick={() => {
-                                console.log("GO TO PAGE", p);
-                                setCurrentPage(p);
+                                const hasParts = Array.isArray(video.video_parts) && video.video_parts.length > 0;
+
+                                const route = hasParts
+                                    ? `/posts/${video.id}?part=1&feed=creator&creator=${creator.id}`
+                                    : `/posts/${video.id}?feed=creator&creator=${creator.id}`;
+
+                                console.log("[CREATOR VIDEOS PAGE NAVIGATE]", {
+                                    videoId: video.id,
+                                    hasParts,
+                                    route
+                                });
+
+                                window.location.href = route;
                             }}
                         >
                             {p}
@@ -101,9 +110,25 @@ const CreatorVideosPage = ({ creator, videos }) => {
                             src={video.video_url}
                             className="explore-video"
                             muted
-                            onClick={() => {
-                                console.log("OPEN MODAL VIDEO", video.id);
-                                setSelectedVideo(video);
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const hasParts =
+                                    Array.isArray(video.video_parts) && video.video_parts.length > 0;
+
+                                const route = hasParts
+                                    ? `/posts/${video.id}?part=1&feed=creator&creator=${creator.id}`
+                                    : `/posts/${video.id}?feed=creator&creator=${creator.id}`;
+
+                                console.log("[CREATOR VIDEOS PAGE CLICK -> NAVIGATE]", {
+                                    videoId: video.id,
+                                    creatorId: creator.id,
+                                    hasParts,
+                                    route
+                                });
+
+                                window.location.href = route;
                             }}
                             playsInline
                             preload="metadata"
@@ -125,12 +150,6 @@ const CreatorVideosPage = ({ creator, videos }) => {
                 {renderPagination()}
             </div>
         </main>
-        {selectedVideo && (
-        <VideoModal
-            videoData={selectedVideo}
-            onClose={() => setSelectedVideo(null)}
-        />
-        )}
         </div>
     );
 };
@@ -154,7 +173,20 @@ export async function getServerSideProps({ params }) {
 
   const { data: videos } = await supabase
     .from("posts")
-    .select("*")
+    .select(`
+        *,
+        video_parts (
+        id,
+        post_id,
+        part_number,
+        video_url,
+        likes_count,
+        comments_count,
+        views_count,
+        created_at,
+        user_id
+        )
+    `)
     .eq("user_id", creator.id)
     .order("created_at", { ascending: false });
 

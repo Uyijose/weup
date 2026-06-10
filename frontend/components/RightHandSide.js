@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import Post from "./Post";
-import PopunderPostsAd from "./ads/popunder_posts.jsx";
+// import PopunderPostsAd from "./ads/popunder_posts.jsx";
 import Skeleton from "./Skeleton/Skeleton";
 import { getAuthToken } from "../utils/getAuthToken.js";
 import { usePostsStore } from "../stores/postsStore.js";
+import { safePopunder } from "../utils/safePopunder";
 
 const RightHandSide = () => {
   const router = useRouter();
@@ -15,15 +16,17 @@ const RightHandSide = () => {
 
   const posts = usePostsStore(state => state.posts);
   const hydrateAllPosts = usePostsStore(state => state.hydrateAllPosts);
-  const loadInitialPosts = usePostsStore(state => state.loadInitialPosts);
+  const loadInitialFeedPosts = usePostsStore(state => state.loadInitialFeedPosts);
   const appendNextPost = usePostsStore(state => state.appendNextPost);
   const forceFirstPost = usePostsStore(state => state.forceFirstPost);
 
   useEffect(() => {
-    if (!router.isReady) {
+    if (!router.isReady) return;
+
+    if (router.asPath.startsWith("/posts/") && router.query.id) {
       return;
     }
-    const fetchPosts = async () => {
+    const run = async () => {
       const token = await getAuthToken();
 
       const res = await fetch(
@@ -43,31 +46,29 @@ const RightHandSide = () => {
         : Array.isArray(response.data)
         ? response.data
         : [];
-      if (!allPosts.length) {
-        return;
-      }
 
-      let orderedPosts = [...allPosts].sort(() => Math.random() - 0.5);
+      if (!allPosts.length) return;
 
-      if (postIdFromUrl) {
-        const selected = orderedPosts.find(p => p.id === postIdFromUrl);
-        const rest = orderedPosts.filter(p => p.id !== postIdFromUrl);
+      hydrateAllPosts(allPosts);
 
-        if (selected) {
-          orderedPosts = [selected, ...rest];
-        } else {
-          console.log("PostId not found in posts:", postIdFromUrl);
-        }
-      } else {
-        console.log("No postId in URL");
-      }
+      const store = usePostsStore.getState();
 
-      hydrateAllPosts(orderedPosts);
-      loadInitialPosts();
+      console.log("[POSTS PAGE] allPosts after hydrate", store.allPosts.length);
+
+      store.setActiveFeed(store.allPosts, store.activeFeed.category);
+
+      console.log(
+        "[POSTS PAGE] activeFeed rebuilt",
+        store.activeFeed.category,
+        store.activeFeed.orderedIds.length
+      );
+
+      store.loadInitialFeedPosts();
     };
 
-    fetchPosts();
-  }, [router.isReady, postIdFromUrl]);
+    run();
+  }, [router.isReady]);
+
 
   useEffect(() => {
     const container = containerRef.current;
@@ -84,6 +85,10 @@ const RightHandSide = () => {
       const index = Math.floor(scrollTop / height);
 
       if (index !== lastIndex) {
+        if (index > 0 && index % 5 === 0) {
+          const key = `scroll_popunder_${index}`;
+          safePopunder(key);
+        }
         if (
           index > 0 &&
           router.asPath.startsWith("/posts/") &&
@@ -124,11 +129,7 @@ const RightHandSide = () => {
               if (el) postRefs.current[post.id] = el;
             }}
           >
-            {(index + 1) % 5 === 0 ? (
-              <PopunderPostsAd post={post} index={index} />
-            ) : (
-              <Post post={post} />
-            )}
+            <Post post={post} />
           </div>
         </React.Fragment>
       ))

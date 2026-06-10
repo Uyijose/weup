@@ -1,6 +1,7 @@
 import express from "express"
 import { PutObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
+import crypto from "crypto"
 import { r2 } from "../services/r2.service.js"
 import { requireAuth } from "../middleware/auth.middleware.js"
 
@@ -14,6 +15,13 @@ const { fileType } = req.body
 
 console.log("fileType received", fileType)
 
+const hash = crypto
+  .createHash("md5")
+  .update(req.body.originalFileName + Date.now())
+  .digest("hex")
+
+console.log("[UPLOAD HASH]", hash)
+
 let extension = "mp4"
 let contentType = "video/mp4"
 
@@ -22,8 +30,10 @@ if (fileType === "image") {
   contentType = "image/jpeg"
 }
 
-let fileName = req.body.caption || req.body.originalFileName || `video_${Date.now()}`;
-if(fileName.length > 30) fileName = fileName.slice(0, 30) + "...";
+let fileName = `${hash}`
+if (fileName.length > 30) {
+  fileName = fileName.slice(0, 30);
+}
 fileName = fileName.replace(/\s+/g, "_").replace(/[^\w\-\.]/g, "");
 const fileKey = `uploads/${fileName}.${extension}`;
 console.log("fileKey generated:", fileKey);

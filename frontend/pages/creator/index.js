@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { supabase } from "../../utils/supabaseClient";
 import Header from "../../components/Header";
 import LeftHandSide from "../../components/LeftHandSide";
@@ -15,6 +16,11 @@ const CreatorsList = () => {
   const router = useRouter();
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const siteTitle = "WeUp - Discover Creators";
+  const siteDescription = "Discover top creators and their content on WeUp.";
+  const siteUrl = "https://weup-dun.vercel.app/";
+  const siteImage = "https://whosup.fun/whosup-icon.PNG";
 
   useEffect(() => {
     const fetchCreators = async () => {
@@ -61,6 +67,7 @@ const CreatorsList = () => {
   if (creators.length === 0) {
     return (
       <div>
+        
         <Header mobileMenu={mobileMenu} setMobileMenu={setMobileMenu} />
 
         <main>
@@ -78,7 +85,27 @@ const CreatorsList = () => {
   }
 
   return (
-    <div>
+  <div>
+    <Head>
+      <title>WeUp - Discover Creators</title>
+
+      <meta name="description" content="Discover top creators and their content on WeUp." />
+
+      <link rel="icon" href="/favicon.ico" />
+      <link rel="apple-touch-icon" href="/favicon.ico" />
+
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content="WeUp - Discover Creators" />
+      <meta property="og:description" content="Discover top creators and their content on WeUp." />
+      <meta property="og:url" content="https://weup-dun.vercel.app/" />
+      <meta property="og:site_name" content="WeUp" />
+      <meta property="og:image" content="https://whosup.fun/whosup-icon.PNG" />
+
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="WeUp - Discover Creators" />
+      <meta name="twitter:description" content="Discover top creators and their content on WeUp." />
+      <meta name="twitter:image" content="https://whosup.fun/whosup-icon.PNG" />
+    </Head>
       <Header mobileMenu={mobileMenu} setMobileMenu={setMobileMenu} />
 
       <main>

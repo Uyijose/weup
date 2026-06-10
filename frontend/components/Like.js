@@ -4,21 +4,29 @@ import toast from "react-hot-toast";
 import { useLikesStore } from "../stores/likesStore.js";
 import { usePostsStore } from "../stores/postsStore.js";
 
-const Like = ({ postId, isVideoPart }) => {
+const Like = ({ postId, videoPartId, isVideoPart }) => {
   const { likesMap, fetchLikeState, toggleLike } = useLikesStore();
   const { postsMap } = usePostsStore();
 
-  const likeState = likesMap[postId] || { hasLiked: false };
-  const likesCount = postsMap[postId]?.likes_count ?? 0;
+  const keyId = isVideoPart ? videoPartId : postId;
+
+  const likeState = likesMap[keyId] || { hasLiked: false };
+
+  const likesCount =
+    postsMap[keyId]?.likes_count ?? 0;
 
   useEffect(() => {
-    fetchLikeState(postId, isVideoPart);
-  }, [postId, isVideoPart]);
+    if (!keyId) return;
+    fetchLikeState(keyId, isVideoPart);
+  }, [keyId, isVideoPart]);
 
   const handleToggle = async () => {
-    const res = await toggleLike(postId, isVideoPart);
+    const res = await toggleLike(keyId, isVideoPart);
+
     if (!res) {
       toast.error("Please login to like this post");
+    } else {
+      console.log("[LIKE SUCCESS]", res);
     }
   };
 

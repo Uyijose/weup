@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { motion } from "framer-motion";
 import { useRouter } from "next/router";
+import { supabase } from "../utils/supabaseClient";
 import React, { useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import avatarFallback from "./assets/avatar-fallback.jpg";
@@ -16,9 +17,8 @@ import { MdSecurity } from "react-icons/md";
 import { FaTelegramPlane } from "react-icons/fa";
 import SwipeUpHint from "./SwipeUpHint";
 import { usePostsStore } from "../stores/postsStore";
-import { useUsersStore } from "../stores/usersStore";
+import { useReportsStore } from "../stores/reportsStore";
 import { useAuthStore } from "../stores/authStore";
-import { useWatchedHistoryStore } from "../stores/watchedHistoryStore";
 
 const GLOBAL_MUTE_KEY = "global_video_muted";
 const GLOBAL_VOLUME_KEY = "global_video_volume";
@@ -30,16 +30,17 @@ function getCookie(name) {
 }
 
 const Post = ({ post }) => {
-  const posts = usePostsStore(state => state.posts);
+  const allPosts = usePostsStore(state => state.allPosts);
   const postsMap = usePostsStore(state => state.postsMap);
   const router = useRouter();
+  const partFromUrl = router.query.part ? Number(router.query.part) : null;
   const videoRef = useRef(null);
   const volumeTimeoutRef = useRef(null);
   const lastTapRef = useRef(0);
+  const tapTimeoutRef = useRef(null);
   const singleTapTimeoutRef = useRef(null);
-  const authUser = useAuthStore(state => state.user);
-  const usersMap = useUsersStore(state => state.usersMap);
-  const fetchUserById = useUsersStore(state => state.fetchUserById);
+  const [user, setUser] = useState(null);
+  const [postUser, setPostUser] = useState(null); // matched user object
   const [playing, setPlaying] = useState(false);
   const [isHover, setIsHover] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(() => {
@@ -52,10 +53,13 @@ const Post = ({ post }) => {
     const stored = localStorage.getItem(GLOBAL_VOLUME_KEY);
     return stored === null ? 0 : parseFloat(stored);
   });
+  const [hasCountedView, setHasCountedView] = useState(false);
   const [isComOpem, setIsComOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [tagCheck, setIsTagCheck] = useState();
   const [progress, setProgress] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const scrubRef = useRef(false);
   const [showProgress, setShowProgress] = useState(true);
   const progressTimeoutRef = useRef(null);
   const [showVolumeBar, setShowVolumeBar] = useState(false);
@@ -63,29 +67,25 @@ const Post = ({ post }) => {
   const [showPauseAd, setShowPauseAd] = useState(false);
   const [showBottomAd, setShowBottomAd] = useState(false);
   const { id, caption, topic, song_name, video_url, user_id, part_number } = post;
-  const [postUser, setPostUser] = useState(null);
-
-  useEffect(() => {
-    if (usersMap[user_id]) {
-      setPostUser(usersMap[user_id]);
-    } else {
-      fetchUserById(user_id).then(() => {
-        const fetchedUser = useUsersStore.getState().usersMap[user_id];
-        setPostUser(fetchedUser);
-      });
-    }
-  }, [user_id, usersMap, fetchUserById]);
-  const storePost = postsMap[id] || post;
-  const commentCount = storePost.comments_count ?? 0;
+  const item = post;
+  const commentCount = item?.comments_count ?? post?.comments_count ?? 0;
   const commentModalRef = useRef(null);
   const [nextPart, setNextPart] = useState(null);
   const [showNextOverlay, setShowNextOverlay] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(true);
   const lastMinuteShownRef = useRef(-1);
   const overlayTimeoutRef = useRef(null);
+  const reportedMap = useReportsStore(state => state.reportedMap);
+  const fetchUserReports = useReportsStore(state => state.fetchUserReports);
+  const submitReport = useReportsStore(state => state.submitReport);
+  const authUser = useAuthStore(state => state.user);
+
   const username = postUser?.username || "Unknown User";
-  const isVideoPart = post.original_post_id !== undefined && post.original_post_id !== null;
- 
+  const isVideoPart = item?.type === "part";
+  const commentKey = post.type === "part"
+    ? post.video_part_id
+    : post.id;
+
   useEffect(() => {
     if (!videoRef.current) return;
     const video = videoRef.current;
@@ -103,51 +103,90 @@ const Post = ({ post }) => {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+
+    const resetHideTimer = (source) => {
+
+      if (progressTimeoutRef.current) {
+        clearTimeout(progressTimeoutRef.current);
+      }
+
+      if (video.paused) {
+        setShowProgress(true);
+        return;
+      }
+
+      setShowProgress(true);
+
+      progressTimeoutRef.current = setTimeout(() => {
+        setShowProgress(false);
+        setTimeout(() => {
+        }, 0);
+      }, 5000);
+    };
+
     const handlePlay = () => {
+      resetHideTimer("play");
+    };
+
+    const handlePause = () => {
       setShowProgress(true);
       if (progressTimeoutRef.current) {
         clearTimeout(progressTimeoutRef.current);
       }
-      progressTimeoutRef.current = setTimeout(() => {
-        setShowProgress(false);
-      }, 5000);
     };
+
+    const handleActivity = () => {
+      if (!video.paused) {
+        resetHideTimer("activity");
+      }
+    };
+
     video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("mousemove", handleActivity);
+    video.addEventListener("touchstart", handleActivity);
+    video.addEventListener("pointermove", handleActivity);
+
     return () => {
       video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("mousemove", handleActivity);
+      video.removeEventListener("touchstart", handleActivity);
+      video.removeEventListener("pointermove", handleActivity);
+
+      if (progressTimeoutRef.current) {
+        clearTimeout(progressTimeoutRef.current);
+      }
     };
   }, []);
 
   useEffect(() => {
-    if (!posts.length || !post) return;
-    const seriesId = post.original_post_id || post.id;
-    const sameSeries = posts.filter(p =>
-      (p.original_post_id || p.id) === seriesId
-    );
-    if (sameSeries.length <= 1) {
-      setNextPart(null);
-      return;
-    }
-    const currentPart = part_number || 1;
-    const highestPart = Math.max(...sameSeries.map(p => p.part_number || 1));
-    let targetPart = currentPart + 1;
+    if (!allPosts.length || !post) return;
 
-    if (targetPart > highestPart) {
-      targetPart = 1;
-    }
-    const foundNext = sameSeries.find(p =>
-      (p.part_number || 1) === targetPart
-    );
-    if (!foundNext) {
+    const basePostId =
+      post.type === "part" ? post.post_id : post.id;
+
+    const allParts = allPosts
+      .filter(p => p.type === "part" && p.post_id === basePostId)
+      .sort((a, b) => a.part_number - b.part_number);
+    if (!allParts.length) {
       setNextPart(null);
       return;
     }
-    if (foundNext.id === id) {
+
+    const currentPartNumber =
+      post.type === "part" ? post.part_number : 0;
+
+    const next =
+      allParts.find(p => p.part_number === currentPartNumber + 1) ||
+      allParts.find(p => p.part_number === 1);
+
+    if (next) {
+      setNextPart(next);
+    } else {
       setNextPart(null);
-      return;
     }
-    setNextPart(foundNext);
-  }, [post, posts]);
+  }, [post, allPosts]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -183,6 +222,42 @@ const Post = ({ post }) => {
       setShowBottomAd(false);
     };
   }, [id]);
+
+  useEffect(() => {
+    const fetchPostUser = async () => {
+      if (!user_id) return;
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user_id)
+        .single();
+      if (error) {
+        setPostUser(null);
+      } else {
+        setPostUser(data);
+      }
+    };
+
+    fetchPostUser();
+  }, [user_id]);
+
+  // -------------------
+  // Fetch current logged-in user
+  // -------------------
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user ?? null);
+    };
+
+    getSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   // -------------------
   // Video mute
@@ -246,20 +321,69 @@ const Post = ({ post }) => {
     if (topic) setIsTagCheck(topic.match(/#/g));
   }, [topic]);
 
-  const handleProgressClick = (e) => {
-    e.stopPropagation();
-    const bar = e.currentTarget;
-    const rect = bar.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percent = clickX / rect.width;
-    if (!videoRef.current || !videoRef.current.duration) return;
-    const newTime = percent * videoRef.current.duration;
-    videoRef.current.currentTime = newTime;
-    setProgress(percent * 100);
+  const seekFromPointer = (clientX, target) => {
+  const rect = target.getBoundingClientRect();
+  const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+  const percent = x / rect.width;
+  if (!videoRef.current || !videoRef.current.duration) return;
+
+  const newTime = percent * videoRef.current.duration;
+  videoRef.current.currentTime = newTime;
+  setProgress(percent * 100);
+};
+
+const handleProgressPointerDown = (e) => {
+  e.stopPropagation();
+  if (progressTimeoutRef.current) {
+    clearTimeout(progressTimeoutRef.current);
+  }
+  setShowProgress(true);
+  setIsScrubbing(true);
+    scrubRef.current = true;
+
+    const target = e.currentTarget;
+
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+
+    seekFromPointer(e.clientX, target);
+
+    target.setPointerCapture?.(e.pointerId);
+
+    const move = (ev) => {
+      if (!scrubRef.current) return;
+      seekFromPointer(ev.clientX, target);
+    };
+
+    const up = (ev) => {
+      setIsScrubbing(false);
+      scrubRef.current = false;
+
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+
+      if (videoRef.current) {
+        videoRef.current.play();
+      }
+    };
+
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
   };
 
   const handleShare = async () => {
-    const postUrl = `${window.location.origin}/posts/${id}`;
+    let postUrl = "";
+
+    if (post.type === "part") {
+      const basePostId = post.post_id;
+      const partNumber = post.part_number;
+
+      postUrl = `${window.location.origin}/posts/${basePostId}?part=${partNumber}`;
+    } else {
+      postUrl = `${window.location.origin}/posts/${post.id}`;
+    }
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -279,37 +403,143 @@ const Post = ({ post }) => {
     }
   };
 
-  const watchedHistoryStore = useWatchedHistoryStore(state => state);
-  const hasTriggeredRef = useRef(false);
+  const resolveIds = (post) => {
+    const rawId = post.id;
 
-  const incrementView = () => {
-    if (!videoRef.current) return;
-    if (hasTriggeredRef.current) return;
+    console.log("[VIEW RESOLVE] raw id received:", rawId);
 
-    const video = videoRef.current;
+    let postId = null;
+    let videoPartId = null;
 
-    if (video.currentTime >= 3) {
-      hasTriggeredRef.current = true;
-      console.log("VIEW TRIGGERED for", post.id);
-      watchedHistoryStore.addView({
-        post,
-        userId: authUser?.id
-      });
+    if (post.type === "part" || post.original_post_id) {
+        postId = post.original_post_id || post.post_id;
+
+        console.log("[VIEW RESOLVE] detected PART", {
+            postId
+        });
+
+        const parts = post.original_post?.video_parts || [];
+
+        console.log("[VIEW RESOLVE] available parts:", parts.length);
+
+        const match = parts.find(p =>
+            Number(p.part_number) === Number(post.part_number)
+        );
+
+        videoPartId = match?.id || post.video_part_id || null;
+
+        console.log("[VIEW RESOLVE] matched part:", {
+            videoPartId,
+            part_number: post.part_number
+        });
+
+    } else {
+        postId = rawId;
+        videoPartId = null;
+
+        console.log("[VIEW RESOLVE] detected POST", {
+            postId
+        });
     }
+
+    return { postId, videoPartId };
   };
 
   useEffect(() => {
-    hasTriggeredRef.current = false;
-    const video = videoRef.current;
-    if (!video) return;
+    if (!videoRef.current || hasCountedView) return;
 
-    video.addEventListener("timeupdate", incrementView);
+    const handleViewThreshold = async () => {
+        if (videoRef.current.currentTime >= 3 && !hasCountedView) {
+            setHasCountedView(true);
 
-    return () => {
-      video.removeEventListener("timeupdate", incrementView);
+            if (user?.id) {
+              const { postId, videoPartId } = resolveIds(post);
+
+              console.log("[VIEW DEBUG] FINAL IDS", {
+                  postId,
+                  videoPartId
+              });
+
+              const { data, error } = await supabase
+                  .from("post_views")
+                  .insert({
+                      post_id: postId,
+                      video_part_id: videoPartId,
+                      viewer_id: user.id
+                  })
+                  .select();
+
+              if (error) {
+                  console.log("[VIEW DEBUG] insert error", error);
+                  return;
+              }
+
+              console.log("[VIEW DEBUG] view inserted", data);
+
+              if (videoPartId) {
+                  console.log("[VIEW DEBUG] increment VIDEO PART views RPC", {
+                      video_part_id: videoPartId
+                  });
+
+                  const { error: partErr } = await supabase.rpc(
+                      "increment_video_part_views",
+                      {
+                          p_video_part_id: videoPartId.toString(),
+                          p_viewer_id: user.id.toString()
+                      }
+                  );
+
+                  if (partErr) {
+                      console.log("[VIEW DEBUG] video part RPC error", partErr);
+                  } else {
+                      console.log("[VIEW DEBUG] video part views updated");
+                  }
+
+              } else {
+                  console.log("[VIEW DEBUG] increment POST views RPC", {
+                      post_id: postId,
+                      creator_id: user_id
+                  });
+
+                  const { error: postErr } = await supabase.rpc(
+                      "increment_post_views",
+                      {
+                          p_post_id: postId.toString(),
+                          p_viewer_id: user.id.toString(),
+                          p_creator_id: user_id?.toString()
+                      }
+                  );
+
+                  if (postErr) {
+                      console.log("[VIEW DEBUG] post RPC error", postErr);
+                  } else {
+                      console.log("[VIEW DEBUG] post views updated");
+                  }
+              }
+          } else {
+              let anonId = getCookie("anon_id");
+              if (!anonId) {
+                  anonId = crypto.randomUUID();
+                  document.cookie = `anon_id=${anonId}; path=/; max-age=31536000`; // 1 year
+              } else {
+                  console.log("Using existing anon_id:", anonId);
+              }
+              await supabase.rpc("increment_post_views_anonymous", {
+                  p_post_id: id.toString(),
+                  p_anon_id: anonId,
+                  p_video_part_id: post.original_post_id ? id : null
+              });
+          }
+        }
     };
-  }, [post.id, authUser]);
 
+    const videoEl = videoRef.current;
+    videoEl.addEventListener("timeupdate", handleViewThreshold);
+    return () => {
+        videoEl.removeEventListener("timeupdate", handleViewThreshold);
+    };
+  }, [user, hasCountedView, id, user_id]);
+  
   useEffect(() => {
     if (!videoRef.current || !nextPart) return;
     const videoEl = videoRef.current;
@@ -350,13 +580,10 @@ const Post = ({ post }) => {
   }, [nextPart]);
 
   useEffect(() => {
-    const authStore = require("../stores/authStore").useAuthStore.getState();
-    const reportsStore = require("../stores/reportsStore").useReportsStore.getState();
-
-    if (authStore.user) {
-      reportsStore.fetchUserReports(authStore.user.id);
+    if (authUser?.id) {
+      fetchUserReports(authUser.id);
     }
-  }, []);
+  }, [authUser]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -395,55 +622,87 @@ const Post = ({ post }) => {
               className="video-element no-download-video"
               onContextMenu={(e) => {
                 e.preventDefault();
-                console.log("RIGHT CLICK / LONG PRESS BLOCKED");
               }}
               onDragStart={(e) => {
                 e.preventDefault();
-                console.log("VIDEO DRAG BLOCKED");
               }}
               onTouchStart={() => {
                 setShowSwipeHint(false);
               }}
               onClick={(e) => {
                 setShowSwipeHint(false);
-                const now = Date.now();
+
                 const video = videoRef.current;
+                const now = Date.now();
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const isLeft = x < rect.width / 2;
 
-                if (now - lastTapRef.current < 300) {
-                  console.log("DOUBLE TAP");
+                const isDoubleTap = now - lastTapRef.current < 250;
+                lastTapRef.current = now;
+                if (tapTimeoutRef.current) {
+                  clearTimeout(tapTimeoutRef.current);
+                }
+
+                if (isDoubleTap) {
+                  console.log("[TAP] DOUBLE TAP → SEEK ONLY");
+
                   if (isLeft) {
-                    video.currentTime = Math.max(video.currentTime - 5, 0);
+                    const newTime = Math.max(video.currentTime - 5, 0);
+                    video.currentTime = newTime;
                   } else {
-                    video.currentTime = Math.min(video.currentTime + 5, video.duration);
+                    const newTime = Math.min(video.currentTime + 5, video.duration);
+                    video.currentTime = newTime;
                   }
+
                   return;
                 }
+                tapTimeoutRef.current = setTimeout(() => {
+                  if (!videoRef.current) return;
 
-                lastTapRef.current = now;
-
-                if (playing) {
-                  video.pause();
-                  setPlaying(false);
-                } else {
-                  video.play();
-                  setPlaying(true);
-                }
+                  if (videoRef.current.paused) {
+                    videoRef.current.play();
+                    setPlaying(true);
+                  } else {
+                    videoRef.current.pause();
+                    setPlaying(false);
+                  }
+                }, 250);
               }}
             />
             <SwipeUpHint visible={showSwipeHint} />
-            <VideoTopAd videoId={id} />
-            {showBottomAd && <VideoBottomAd videoId={id} />}
+            {/* {typeof window !== "undefined" && (
+              <VideoTopAd videoId={id} />
+            )} */}
+            {showBottomAd && typeof window !== "undefined" && (
+            <>
+              {/* <VideoBottomAd videoId={id} /> */}
+            </>
+          )}
             <div
-              className={`video-progress-bar ${showProgress ? "" : "hidden"}`}
-              onClick={handleProgressClick}
+              className="video-progress-hit"
+              style={{
+                opacity: showProgress ? 1 : 0,
+                pointerEvents: showProgress ? "auto" : "none",
+                transition: "opacity 0.25s ease"
+              }}
+              onPointerDown={handleProgressPointerDown}
             >
-              <div
-                className="video-progress-filled"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="video-progress-bar">
+                <div
+                  className="video-progress-filled"
+                  style={{ width: `${progress}%` }}
+                />
+                <div
+                  className="video-progress-thumb"
+                  style={{ left: `${progress}%` }}
+                />
+                {isScrubbing && (
+                  <div style={{ position: "absolute", bottom: 90, left: 10, color: "white", fontSize: 12 }}>
+                    SCRUBBING...
+                  </div>
+                )}
+              </div>
             </div>
             {playing === false && (
               <div className="video-play-center">
@@ -470,7 +729,11 @@ const Post = ({ post }) => {
               <div
                 className="next-part-content"
                 onClick={() => {
-                  router.push(`/detail/${nextPart.id}`);
+                  const basePostId =
+                    post.type === "part"
+                      ? post.post_id
+                      : post.id;
+                  router.push(`/posts/${basePostId}?part=${nextPart.part_number}`);
                 }}
               >
                 <div className="next-part-play">
@@ -505,6 +768,7 @@ const Post = ({ post }) => {
             </div>
             <span className="video-caption text-sm font-normal mt-1">
               {caption}
+              {post.type === "part" && ` (Part ${post.part_number})`}
             </span>
             <span className="video-topic text-sm font-semibold text-white mt-1">
               {topic
@@ -518,7 +782,13 @@ const Post = ({ post }) => {
           <div className="flex justify-center">
           <div className="video-actions">
             <div className="video-action-btn">
-              <Like user={authUser} postId={id} isVideoPart={isVideoPart} likesCountProp={post.likes_count} />
+              <Like
+                user={user}
+                postId={id}
+                videoPartId={post.video_part_id}
+                isVideoPart={isVideoPart}
+                likesCountProp={post.likes_count}
+              />
             </div>
             <div className="video-action-btn">
               <motion.div whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.95 }}>
@@ -555,17 +825,13 @@ const Post = ({ post }) => {
                 <div
                   onClick={async (e) => {
                     e.stopPropagation();
-                    const authStore = require("../stores/authStore").useAuthStore.getState();
-                    const reportsStore = require("../stores/reportsStore").useReportsStore.getState();
-                    const { user } = authStore;
-                    const { submitReport, reportedMap } = reportsStore;
-
+                    const user = authUser;
                     if (!user) {
                       toast.error("Only logged-in users can report videos");
                       return;
                     }
 
-                    if (reportedMap[id]) {
+                    if (reportedMap[post.id]) {
                       toast("You have already reported this video. Your report is under review.");
                       return;
                     }
@@ -577,7 +843,7 @@ const Post = ({ post }) => {
                     }
 
                     const result = await submitReport({
-                      targetId: id,
+                      targetId: post.id,
                       type: "post",
                       reason,
                       reasonCode: "user_text",
@@ -594,7 +860,11 @@ const Post = ({ post }) => {
                 >
                   <MdSecurity
                     size={22}
-                    className={require("../stores/reportsStore").useReportsStore.getState().reportedMap[id] ? "text-gray-400" : "text-red-500"}
+                    className={
+                      reportedMap[post.id]
+                        ? "text-gray-400"
+                        : "text-red-500"
+                    }
                   />
                 </div>
 
@@ -662,13 +932,15 @@ const Post = ({ post }) => {
         {isComOpem && (
           <div className="comment-modal" ref={commentModalRef}>
             <div className="comment-modal-body">
+
               <Comments
-                postId={id}
-                originalPostId={post.original_post_id}
-                user={authUser}
+                postId={post.type === "part" ? post.post_id : post.id}
+                videoPartId={post.type === "part" ? post.video_part_id : null}
+                commentKey={commentKey}
+                user={user}
                 onClose={() => setIsComOpen(false)}
                 onCountChange={(newCount) => {
-                  usePostsStore.getState().updateCommentsCount(id, newCount);
+                  usePostsStore.getState().updateCommentsCount(commentKey, newCount);
                 }}
               />
             </div>

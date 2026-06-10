@@ -115,77 +115,6 @@
   border-radius: 2px;
 }
 
-.ad-overlay-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 60;
-  width: 320px;
-  height: 280px;
-  padding: 24px;
-  border-radius: 18px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(12px);
-}
-
-.ad-pause-popup {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 65;
-  width: 300px;
-  height: 240px;
-  padding: 22px;
-  background: #1A0033;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ad-close-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: transparent;
-  border: none;
-  color: white;
-  font-size: 30px;
-  font-weight: bold;
-  cursor: pointer;
-  z-index: 100;
-}
-
-.ad-video-feed {
-  width: 100%;
-  height: 100vh;
-  max-width: 520px;
-  position: relative;
-  background: #000;
-  overflow: hidden;
-}
-
-.ad-video-feed ins {
-  width: 100%;
-  height: 100vh;
-  display: block;
-}
-
-.ad-fallback {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: black;
-  color: white;
-  z-index: 30;
-}
 
 /* =====================================================
    PLAY / PAUSE CENTER ICON
@@ -312,29 +241,46 @@
    PROGRESS BAR
 ===================================================== */
 
+.video-progress-hit {
+  position: absolute;
+  bottom: 58px;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  z-index: 90;
+  cursor: pointer;
+}
+
 .video-progress-bar {
   position: absolute;
-  bottom: 70px;
+  bottom: 10px;
   left: 0;
   height: 4px;
   width: 100%;
   background-color: rgba(255,255,255,0.25);
-  overflow: hidden;
-  z-index: 90;
-  opacity: 1;
-  transition: opacity 0.3s ease;
-  pointer-events: auto;
-}
-
-.video-progress-bar.hidden {
-  opacity: 0;
+  overflow: visible;
 }
 
 .video-progress-filled {
   height: 100%;
   background: linear-gradient(90deg, #FF4FA3, #00D2FF);
-  width: 0%;
   transition: width 0.1s linear;
+}
+
+.video-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+
+.video-progress-bar.hidden {
+  opacity: 0;
 }
 
 /* =====================================================

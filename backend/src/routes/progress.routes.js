@@ -4,16 +4,22 @@ import { requireAuth } from "../middleware/auth.middleware.js"
 
 const router = express.Router()
 
-router.get("/:userId",requireAuth,(req,res)=>{
+router.get("/:userId", (req, res) => {
+  try {
 
 const {userId} = req.params
 
-console.log("progress requested",userId)
+console.log("progress requested", userId)
 
 const progress = getProgress(userId)
 
-res.json(progress)
+console.log("[PROGRESS RESPONSE]", progress)
 
+res.json(progress)
+} catch (err) {
+  console.log("progress route error", err.code || err.message)
+  res.json({ percent: 0, message: "error" })
+}
 })
 
 export default router

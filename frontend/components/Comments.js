@@ -1,34 +1,47 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
 import avatarFallback from "./assets/avatar-fallback.jpg";
-import CommentSectionAd from "./ads/CommentSectionAd";
 import { HiOutlinePhotograph } from "react-icons/hi";
 import { getAuthToken } from "../utils/getAuthToken.js";
 import toast from "react-hot-toast";
 import { useCommentsStore } from "../stores/commentsStore.js";
 
-const Comments = ({ postId, originalPostId, onClose, onCountChange }) => {
+const Comments = ({ postId, videoPartId, commentKey, onClose, onCountChange }) => {
   const [comment, setComment] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { commentsMap, fetchComments, addComment } = useCommentsStore();
-  const comments = commentsMap[postId] || [];
+  const comments = commentsMap[commentKey] || [];
 
   useEffect(() => {
-    fetchComments(postId, originalPostId).then((data) =>
-      onCountChange?.(data.length)
-    );
-  }, [postId, originalPostId]);
+    fetchComments(
+      videoPartId ? null : commentKey,
+      videoPartId ? commentKey : null
+    ).then((data) => {
+      onCountChange?.(data.length || 0);
+    });
+  }, [commentKey, videoPartId]);
 
   const sendComment = async (e) => {
     e.preventDefault();
+
     const token = await getAuthToken();
-    if (!token) return toast.error("Please login to comment");
-    if (!comment) return;
+    if (!token) {
+      toast.error("Please login to comment");
+      return;
+    }
+
+    if (!comment.trim()) return;
 
     setLoading(true);
 
+    const payload = {
+      post_id: postId,                 // ALWAYS SEND POST ID
+      video_part_id: videoPartId || null,
+      comment,
+      image_url: imageUrl || null,
+    };
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/comments`,
       {
@@ -37,17 +50,18 @@ const Comments = ({ postId, originalPostId, onClose, onCountChange }) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          post_id: originalPostId ? originalPostId : postId,
-          video_part_id: originalPostId ? postId : null,
-          comment,
-          image_url: imageUrl,
-        }),
+        body: JSON.stringify(payload),
       }
     );
 
     const data = await res.json();
-    addComment(postId, data);
+    if (!res.ok) {
+      toast.error("Failed to post comment");
+      setLoading(false);
+      return;
+    }
+
+    addComment(commentKey, data);
     onCountChange?.(comments.length + 1);
 
     setComment("");
@@ -68,7 +82,6 @@ const Comments = ({ postId, originalPostId, onClose, onCountChange }) => {
       <div className="comment-modal-body">
         {comments.length > 0 ? (
           <div className="comment-list">
-            {/* <CommentSectionAd /> */}
             {comments.map((c) => (
               <div className="comment-item" key={c.id}>
                 <img
@@ -80,17 +93,22 @@ const Comments = ({ postId, originalPostId, onClose, onCountChange }) => {
                   <span className="comment-user">@{c.users?.username}</span>
                   <p>{c.comment}</p>
                   {c.image_url && (
-                    <img src={c.image_url} className="comment-image" alt="comment" />
+                    <img
+                      src={c.image_url}
+                      className="comment-image"
+                      alt="comment"
+                    />
                   )}
-                  <span className="comment-time">{moment(c.created_at).fromNow()}</span>
+                  <span className="comment-time">
+                    {moment(c.created_at).fromNow()}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <div className="no-comments">
-            No comments yet 
-            {/* <CommentSectionAd /> */}
+            No comments yet
           </div>
         )}
 
@@ -119,6 +137,7 @@ const Comments = ({ postId, originalPostId, onClose, onCountChange }) => {
               />
             </label>
           </div>
+
           <button
             type="submit"
             className={`comment-post-btn ${loading ? "loading" : ""}`}

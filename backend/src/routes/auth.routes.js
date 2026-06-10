@@ -10,7 +10,6 @@ router.post("/signup", async (req, res) => {
   const { email, password, fullName, username, avatarUrl, is_adult } = req.body;
 
   if (!is_adult) {
-    console.log("User did not confirm is_adult → blocking signup");
     return res.status(400).json({ error: "You must confirm that you are 18+ to register" });
   }
   
@@ -89,7 +88,6 @@ router.post("/signup", async (req, res) => {
 
       if (!existingUser.username) {
         updatedData.username = await ensureUniqueUsername(fullName);
-        console.log("Generated username for existing signup user:", updatedData.username);
       }
 
       if (!existingUser.password && hashedPassword)
@@ -104,7 +102,6 @@ router.post("/signup", async (req, res) => {
 
       if (Object.keys(updatedData).length > 0) {
         updatedData.updated_at = new Date().toISOString();
-        console.log("Updating existing user data:", updatedData);
 
         const { error: updateError } = await supabase
           .from("users")
@@ -112,7 +109,6 @@ router.post("/signup", async (req, res) => {
           .eq("id", userId);
 
         if (updateError) throw updateError;
-        console.log("Existing user updated successfully");
       }
     } else {
       const uniqueUsername = await ensureUniqueUsername(fullName);
@@ -130,7 +126,6 @@ router.post("/signup", async (req, res) => {
 
 
       if (insertError) throw insertError;
-      console.log("Generated username for new signup user:", uniqueUsername);
     }
 
     res.status(200).json({ userId });
@@ -150,13 +145,11 @@ router.post("/signin", async (req, res) => {
       .single();
 
     if (fetchError || !user) {
-      console.log("User not found:", email);
       return res.status(400).json({ error: "User not registered" });
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password || "");
     if (!passwordMatch) {
-      console.log("Incorrect password for user:", email);
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
@@ -166,10 +159,8 @@ router.post("/signin", async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    console.log("User signed in successfully:", user.id);
     res.status(200).json({ userId: user.id, access_token });
   } catch (err) {
-    console.log("Signin backend error:", err.message);
     res.status(400).json({ error: err.message });
   }
 });
@@ -217,7 +208,6 @@ router.post("/google-sync", requireAuth, async (req, res) => {
         username,
       });
       if (insertError) throw insertError;
-      console.log("Google user inserted with username:", username);
       return res.status(200).json({ userId: user.id });
     }
 
@@ -229,14 +219,12 @@ router.post("/google-sync", requireAuth, async (req, res) => {
         .update({ username })
         .eq("email", email);
       if (updateError) throw updateError;
-      console.log("Username generated for existing Google user:", username);
     } else {
       console.log("Google user already exists with username:", username);
     }
 
     res.status(200).json({ userId: user.id });
   } catch (err) {
-    console.log("Google sync backend error:", err.message);
     res.status(400).json({ error: err.message });
   }
 });

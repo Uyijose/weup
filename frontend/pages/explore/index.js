@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import Header from "../../components/Header";
 import LeftHandSide from "../../components/LeftHandSide";
-import FeedInlineAd from "../../components/ads/FeedInlineAd";
 import { usePostsStore } from "../../stores/postsStore";
 import Skeleton from "../../components/Skeleton/Skeleton";
 
@@ -10,89 +10,84 @@ import Skeleton from "../../components/Skeleton/Skeleton";
 const Explore = () => {
   const router = useRouter();
   const allPosts = usePostsStore(state => state.allPosts);
+  const hydrateAllPosts = usePostsStore(state => state.hydrateAllPosts);
   const fetchAllPosts = usePostsStore(state => state.fetchAllPosts);
   const explorePage = usePostsStore(state => state.explorePage);
   const setExplorePage = usePostsStore(state => state.setExplorePage);
   const getExploreTotalPages = usePostsStore(state => state.getExploreTotalPages);
-  const resetExplorePage = usePostsStore(state => state.resetExplorePage);
+  const setActiveFeed = usePostsStore(state => state.setActiveFeed);
+  const activeFeed = usePostsStore(state => state.activeFeed);
 
   const [pageVideos, setPageVideos] = useState([]);
-  const [sortedPosts, setSortedPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [category, setCategory] = useState("explore");
+  const exploreUIState = usePostsStore(state => state.exploreUIState);
+  const setExploreUIState = usePostsStore(state => state.setExploreUIState);
+  const category = exploreUIState.category;
 
   useEffect(() => {
-    const loadPosts = async () => {
-      setIsLoading(true);
+    if (allPosts.length) {
+      console.log("[EXPLORE] mount with cached posts");
+      setIsLoading(false);
+      return;
+    }
 
+    const run = async () => {
+      console.log("[EXPLORE] manual hydrate");
       const posts = await fetchAllPosts();
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
+      hydrateAllPosts(posts);
+      setIsLoading(false);
     };
 
-    loadPosts();
-  }, []);
+    run();
+  }, [allPosts.length]);
 
   useEffect(() => {
-    setIsPageLoading(true);
+  if (!allPosts.length) return;
 
-    let processed = [...allPosts];
+  const { category: current, orderedIds } =
+    usePostsStore.getState().activeFeed;
 
-    if (category === "explore") {
-      processed = [...processed].sort(() => Math.random() - 0.5);
-    }
+  if (current === category && orderedIds.length > 0) {
+    console.log("[EXPLORE PAGE] feed already active & ready", category);
+    return;
+  }
 
-    if (category === "most_viewed") {
-      processed = [...processed].sort(
-        (a, b) => (b.views_count || 0) - (a.views_count || 0)
-      );
-    }
-
-    if (category === "new") {
-      processed = [...processed].sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
-    }
-    setSortedPosts(processed);
-    resetExplorePage();
-
-    setTimeout(() => {
-      setIsPageLoading(false);
-    }, 400);
-  }, [category, allPosts]);
+  console.log("[EXPLORE PAGE] activating feed", category);
+  setActiveFeed(allPosts, category);
+}, [category, allPosts]);
 
   useEffect(() => {
+    console.log("[EXPLORE] paginate from activeFeed", activeFeed.category);
+
     setIsPageLoading(true);
 
-    if (!sortedPosts.length) {
+    if (!activeFeed.orderedIds.length) {
       setPageVideos([]);
       setIsPageLoading(false);
       return;
     }
 
-    const totalPages = Math.ceil(sortedPosts.length / 11);
-
-    if (totalPages === 0) {
-      setPageVideos([]);
-      setIsPageLoading(false);
-      return;
-    }
+    const totalPages = Math.ceil(activeFeed.orderedIds.length / 12);
 
     const safePage = ((explorePage - 1) % totalPages) + 1;
+    const start = (safePage - 1) * 12;
+    const end = start + 12;
 
-    const start = (safePage - 1) * 11;
-    const end = start + 11;
+    const slice = activeFeed.orderedIds
+      .slice(start, end)
+      .map(id => allPosts.find(p => p.id === id))
+      .filter(Boolean);
 
-    const slice = sortedPosts.slice(start, end);
+    console.log("[EXPLORE] page slice size", slice.length);
+
     setPageVideos(slice);
 
     setTimeout(() => {
       setIsPageLoading(false);
-    }, 400);
-  }, [sortedPosts, explorePage]);
+    }, 300);
+  }, [activeFeed, explorePage]);
 
   const renderPagination = () => {
     const total = getExploreTotalPages();
@@ -146,6 +141,26 @@ const Explore = () => {
 
   return (
     <div className="explore-page-wrapper">
+      <Head>
+        <title>WeUp - Discover Viral Videos</title>
+
+        <meta name="description" content="Watch, share, and discover trending short videos on WeUp." />
+
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="WeUp - Discover Viral Videos" />
+        <meta property="og:description" content="Watch, share, and discover trending short videos on WeUp." />
+        <meta property="og:url" content="https://weup-dun.vercel.app/" />
+        <meta property="og:site_name" content="WeUp" />
+        <meta property="og:image" content="https://whosup.fun/whosup-icon.PNG" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="WeUp - Discover Viral Videos" />
+        <meta name="twitter:description" content="Watch, share, and discover trending short videos on WeUp." />
+        <meta name="twitter:image" content="https://whosup.fun/whosup-icon.PNG" />
+      </Head>
       <Header mobileMenu={mobileMenu} setMobileMenu={setMobileMenu} />
 
       <main>
@@ -161,7 +176,8 @@ const Explore = () => {
             <button
               className={`category-btn ${category === "explore" ? "active" : ""}`}
               onClick={() => {
-                setCategory("explore");
+                console.log("[EXPLORE] switch category explore");
+                setExploreUIState({ category: "explore" });
               }}
             >
               Explore
@@ -170,7 +186,7 @@ const Explore = () => {
             <button
               className={`category-btn ${category === "most_viewed" ? "active" : ""}`}
               onClick={() => {
-                setCategory("most_viewed");
+                setExploreUIState({ category: "most_viewed" });
               }}
             >
               Most Viewed
@@ -179,7 +195,7 @@ const Explore = () => {
             <button
               className={`category-btn ${category === "new" ? "active" : ""}`}
               onClick={() => {
-                setCategory("new");
+                setExploreUIState({ category: "new" });
               }}
             >
               New
@@ -188,7 +204,7 @@ const Explore = () => {
 
           {isLoading || isPageLoading ? (
             <div className="explore-grid">
-              {Array.from({ length: 11 }).map((_, i) => (
+              {Array.from({ length: 12 }).map((_, i) => (
                 <div
                   key={i}
                   className="explore-card explore-skeleton-card"
@@ -210,49 +226,47 @@ const Explore = () => {
                       src={video.video_url}
                       className="explore-video"
                       onClick={() => {
-                        const storageKey = `popunder_click_${explorePage}`;
-                        const alreadyClicked = sessionStorage.getItem(storageKey);
+                        const hasParts =
+                          video.type === "part" ||
+                          video.partsCount > 0 ||
+                          video.video_parts?.length > 0 ||
+                          video.original_post?.partsCount > 0;
 
-                        if (!alreadyClicked) {
-                          const pageNumber = explorePage;
+                        const postId = video.post_id || video.id;
 
-                          if (pageNumber % 2 === 1) {
-                            const script = document.createElement("script");
-                            script.src =
-                              "https://pl29006554.profitablecpmratenetwork.com/52/a1/c0/52a1c09e0162f848b769d07e30c130fc.js";
-                            script.async = true;
+                        console.log("[EXPLORE CLICK]", {
+                          id: video.id,
+                          type: video.type,
+                          partsCount: video.partsCount,
+                          rawParts: video.video_parts?.length,
+                          originalParts: video.original_post?.partsCount,
+                          resolvedHasParts: hasParts,
+                          resolvedPostId: postId
+                        });
 
-                            document.body.appendChild(script);
+                        if (video.type === "part") {
+                          console.log("[NAVIGATE] explicit part", video.part_number);
 
-                            sessionStorage.setItem(storageKey, "true");
-
-                            setTimeout(() => {
-                              document.body.click();
-                            }, 200);
-                          } else {
-                            const adConfig = {
-                              ads_host: "a.pemsrv.com",
-                              syndication_host: "s.pemsrv.com",
-                              idzone: 5884826
-                            };
-
-                            const url =
-                              "https://" +
-                              adConfig.syndication_host +
-                              "/v1/link.php?idzone=" +
-                              adConfig.idzone;
-
-                            window.open(url, "_blank");
-
-                            sessionStorage.setItem(storageKey, "true");
-                          }
-
-                          setTimeout(() => {
-                            router.push(`/posts/${video.id}`);
-                          }, 500);
-                        } else {
-                          router.push(`/posts/${video.id}`);
+                          router.push(
+                            `/posts/${video.post_id}?part=${video.part_number}&feed=${category}`
+                          );
+                          return;
                         }
+
+                        if (hasParts) {
+                          console.log("[NAVIGATE] post has parts → force part 1");
+
+                          router.push(
+                            `/posts/${postId}?part=1&feed=${category}`
+                          );
+                          return;
+                        }
+
+                        console.log("[NAVIGATE] normal post (no parts)");
+
+                        router.push(
+                          `/posts/${postId}?feed=${category}`
+                        );
                       }}
                       muted
                     />
@@ -261,16 +275,14 @@ const Explore = () => {
                         {video.caption || "Untitled"}
                       </p>
                       <p className="video-creator">
-                        @{video.users?.creator_username || "unknown"}
+                        @{
+                          video.type === "part"
+                            ? video.original_post?.users?.creator_username || "unknown"
+                            : video.users?.creator_username || "unknown"
+                        }
                       </p>
                     </div>
                   </div>
-
-                  {index === 3 && (
-                    (() => {
-                      return <FeedInlineAd />;
-                    })()
-                  )}
                 </React.Fragment>
               ))}
             </div>

@@ -11,30 +11,74 @@ dotenv.config()
 console.log("ENV loaded", process.env.SUPABASE_URL ? "yes" : "no")
 
 export const progressMap = {}
-export const generateThumbnail = async (videoUrl, postId) => {
+export const resetProgress = (userId) => {
+  console.log("[PROGRESS RESET]", userId)
+  delete progressMap[userId]
+}
+
+export const generateThumbnail = async (videoSource, postId, isLocal = false) => {
 console.log("generateThumbnail started", postId)
 
-const tmpVideo = path.join(os.tmpdir(),`${postId}.mp4`)
-const tmpImage = path.join(os.tmpdir(),`${postId}.jpg`)
+console.log("thumbnail using direct video url")
 
-const res = await fetch(videoUrl)
-const buffer = await res.arrayBuffer()
-fs.writeFileSync(tmpVideo, Buffer.from(buffer))
+const inputPath = videoSource
 
-await new Promise((resolve,reject)=>{
-ffmpeg(tmpVideo)
-.screenshots({
-count:1,
-timemarks:["1"],
-filename:`${postId}.jpg`,
-folder:os.tmpdir(),
-size:"1200x630"
+console.log("[THUMBNAIL INPUT DIRECT]", inputPath)
+
+const tmpImage = path.join(os.tmpdir(), `${postId}.jpg`)
+const thumbStart = Date.now()
+
+console.log("[THUMBNAIL SAFE START]", {
+  inputPath,
+  tmpImage
 })
-.on("end",resolve)
-.on("error",reject)
+
+await new Promise((resolve, reject) => {
+  let finished = false
+
+  const command = ffmpeg(inputPath)
+    .seekInput(1)
+    .outputOptions([
+      "-frames:v 1",
+      "-q:v 2"
+    ])
+    .output(tmpImage)
+    .on("start", cmd => {
+      console.log("[THUMBNAIL CMD]", cmd)
+    })
+    .on("end", () => {
+      finished = true
+      console.log("[THUMBNAIL DONE]", {
+        time: Date.now() - thumbStart
+      })
+      resolve()
+    })
+    .on("error", err => {
+      finished = true
+      console.log("[THUMBNAIL ERROR]", err.message)
+      reject(err)
+    })
+
+  command.run()
+
+  setTimeout(() => {
+    if (!finished) {
+      console.log("[THUMBNAIL FORCE TIMEOUT]")
+      command.kill("SIGKILL")
+      resolve()
+    }
+  }, 10000)
 })
 
 const fileKey = `thumbnails/${postId}.jpg`
+
+if (!fs.existsSync(tmpImage)) {
+  console.log("[THUMBNAIL ERROR] image not created", tmpImage)
+  throw new Error("THUMBNAIL_NOT_CREATED")
+}
+
+console.log("[THUMBNAIL UPLOAD] starting", tmpImage)
+
 
 await r2.send(new PutObjectCommand({
 Bucket:process.env.R2_BUCKET_NAME,
@@ -43,28 +87,52 @@ Body:fs.readFileSync(tmpImage),
 ContentType:"image/jpeg"
 }))
 
-fs.unlinkSync(tmpVideo)
-fs.unlinkSync(tmpImage)
+try {
+  if (tmpImage && fs.existsSync(tmpImage)) {
+    fs.unlinkSync(tmpImage)
+    console.log("[THUMBNAIL CLEANUP] image deleted")
+  } else {
+    console.log("[THUMBNAIL CLEANUP] image not found")
+  }
+} catch (e) {
+  console.log("[THUMBNAIL CLEANUP ERROR]", e.message)
+}
+
+console.log("[THUMBNAIL CLEANUP DONE]")
 
 const url = `${process.env.R2_PUBLIC_URL}/${fileKey}`
+if (!url) {
+  console.log("[THUMBNAIL FALLBACK USED]")
+  return ""
+}
 console.log("thumbnail generated",url)
 return url
 }
 
 export const setProgress = (userId, percent, message) => {
+const current = progressMap[userId]?.percent || 0
+
+if (percent < current) {
+  console.log("progress ignored (backward)", { current, incoming: percent, message })
+  return
+}
+
 console.log("progress update", userId, percent, message)
+
 progressMap[userId] = { percent, message }
 }
 
 export const getProgress = (userId) => {
-return progressMap[userId] || { percent: 0, message: "starting" }
+return progressMap[userId] || { percent: -1, message: "no active upload" }
 }
 
 export const processVideo = async (fileKey,userId) => {
 
 console.log("processVideo service started")
 
-setProgress(userId,10,"starting video processing")
+console.log("[PROCESS START] setting initial progress 10%");
+setProgress(userId,10,"starting processing")
+console.log("[PROGRESS] 10 start")
 
 const tempPath = path.join(os.tmpdir(),`original-${Date.now()}.mp4`)
 const compressedPath = path.join(os.tmpdir(),`compressed-${Date.now()}.mp4`)
@@ -78,15 +146,81 @@ Key:fileKey
 
 const writeStream = fs.createWriteStream(tempPath)
 
-await new Promise((resolve,reject)=>{
-obj.Body.pipe(writeStream)
-obj.Body.on("error",reject)
-writeStream.on("finish",resolve)
+let downloadedBytes = 0
+const totalBytes = Number(obj.ContentLength || 0)
+
+console.log("download started", { totalBytes })
+
+obj.Body.on("data", chunk => {
+  downloadedBytes += chunk.length
+
+  if (totalBytes > 0) {
+    const percent = Math.min(
+      10 + Math.floor((downloadedBytes / totalBytes) * 40),
+      50
+    )
+    setProgress(userId, percent, "downloading video")
+    console.log("downloading", {
+      downloadedBytes,
+      totalBytes,
+      percent
+    })
+  }
+})
+
+await new Promise((resolve, reject) => {
+  let finished = false
+  let lastProgressTime = Date.now()
+
+  const timeoutChecker = setInterval(() => {
+    const now = Date.now()
+    if (now - lastProgressTime > 15000) {
+      console.log("[DOWNLOAD TIMEOUT] no progress for 15s")
+      cleanup()
+      clearInterval(timeoutChecker)
+      reject(new Error("DOWNLOAD_STALLED"))
+    }
+  }, 5000)
+
+  const cleanup = () => {
+    if (finished) return
+    finished = true
+    console.log("stream cleanup triggered")
+    obj.Body.destroy()
+    writeStream.destroy()
+  }
+
+  obj.Body.on("data", chunk => {
+    lastProgressTime = Date.now()
+  })
+
+  obj.Body.on("error", (err) => {
+    console.log("R2 read stream error", err.code || err.message)
+    cleanup()
+    clearInterval(timeoutChecker)
+    reject(err)
+  })
+
+  writeStream.on("error", (err) => {
+    console.log("file write stream error", err.code || err.message)
+    cleanup()
+    clearInterval(timeoutChecker)
+    reject(err)
+  })
+
+  writeStream.on("finish", () => {
+    console.log("file write stream finished")
+    clearInterval(timeoutChecker)
+    resolve()
+  })
+
+  obj.Body.pipe(writeStream)
 })
 
 console.log("download complete")
 
-setProgress(userId,25,"video downloaded")
+setProgress(userId,50,"download complete")
+console.log("[PROGRESS] 50 download complete")
 
 console.log("starting parallel metadata detection")
 
@@ -103,8 +237,18 @@ const [duration,stats] = await Promise.all([durationPromise,sizePromise])
 
 const fileSizeMB = stats.size / (1024*1024)
 
-console.log("video duration seconds",duration)
-console.log("video size MB",fileSizeMB)
+console.log("[DURATION CHECK]", duration);
+
+if (duration > 1800) {
+  console.log("[REJECTED] video too long", duration);
+
+  setProgress(userId, 100, "video too long");
+
+  fs.unlinkSync(tempPath);
+  if (fs.existsSync(compressedPath)) fs.unlinkSync(compressedPath);
+
+  throw new Error("VIDEO_TOO_LONG");
+}
 
 const durationMinutes = duration / 60
 const allowedSize = durationMinutes * 10
@@ -147,7 +291,8 @@ console.log("compression skipped")
 
 }
 
-setProgress(userId,55,"processing video")
+setProgress(userId,60,"processing video")
+console.log("[PROGRESS] 60 processing")
 
 const MAX_PART = 180
 
@@ -168,7 +313,8 @@ const url = `${process.env.R2_PUBLIC_URL}/${fileName}`
 
 console.log("single video uploaded")
 
-setProgress(userId,100,"single video upload complete")
+setProgress(userId,75,"video uploaded")
+console.log("[PROGRESS] 75 video uploaded")
 
 fs.unlinkSync(tempPath)
 if(fs.existsSync(compressedPath)) fs.unlinkSync(compressedPath)
@@ -187,7 +333,16 @@ duration
 
 console.log("multi part video processing")
 
-const numParts = Math.ceil(duration / MAX_PART)
+let numParts = Math.ceil(duration / MAX_PART)
+
+const remainder = duration % MAX_PART
+
+console.log("[SPLIT CHECK]", { duration, remainder })
+
+if (remainder > 0 && remainder < 15) {
+  console.log("[MERGE SMALL LAST PART]", remainder)
+  numParts = Math.floor(duration / MAX_PART)
+}
 
 console.log("number of parts",numParts)
 
@@ -198,7 +353,12 @@ const splitTasks = []
 for(let i=0;i<numParts;i++){
 
 const start = i*MAX_PART
-const partDuration = Math.min(MAX_PART,duration-start)
+let partDuration = Math.min(MAX_PART, duration - start)
+
+if (i === numParts - 1 && remainder > 0 && remainder < 15) {
+  partDuration += remainder
+  console.log("[LAST PART EXTENDED]", partDuration)
+}
 const partPath = path.join(os.tmpdir(),`part-${i}-${Date.now()}.mp4`)
 
 splitTasks.push(new Promise((resolve,reject)=>{
@@ -222,47 +382,86 @@ console.log("all parts split complete")
 
 setProgress(userId,80,"uploading parts")
 
-const uploadTasks = splitResults.map(async(part)=>{
+const parts = []
 
-const fileName = `videos/${Date.now()}-part${part.index+1}.mp4`
+for (let i = 0; i < splitResults.length; i++) {
+  const part = splitResults[i]
 
-await r2.send(new PutObjectCommand({
-Bucket:process.env.R2_BUCKET_NAME,
-Key:fileName,
-Body:fs.createReadStream(part.partPath),
-ContentType:"video/mp4"
-}))
+  console.log("[UPLOAD START]", part.index + 1)
 
-const url = `${process.env.R2_PUBLIC_URL}/${fileName}`
+  let uploaded = false
+  let attempts = 0
 
-fs.unlinkSync(part.partPath)
+  while (!uploaded && attempts < 3) {
+    try {
+      attempts++
 
-console.log("uploaded part",part.index+1)
+      const fileName = `videos/${Date.now()}-part${part.index+1}.mp4`
 
-return {
-partNumber:part.index+1,
-url,
-duration:part.partDuration
+      setProgress(
+        userId,
+        80 + Math.floor((i / splitResults.length) * 5),
+        `uploading part ${part.index + 1} of ${splitResults.length}`
+      )
+
+      await r2.send(new PutObjectCommand({
+        Bucket:process.env.R2_BUCKET_NAME,
+        Key:fileName,
+        Body:fs.createReadStream(part.partPath),
+        ContentType:"video/mp4"
+      }))
+
+      const url = `${process.env.R2_PUBLIC_URL}/${fileName}`
+
+      console.log("[UPLOAD SUCCESS]", part.index + 1)
+
+      parts.push({
+        partNumber: part.index + 1,
+        url,
+        duration: part.partDuration
+      })
+
+      fs.unlinkSync(part.partPath)
+
+      uploaded = true
+
+    } catch (err) {
+      console.log("[UPLOAD RETRY]", part.index + 1, "attempt", attempts, err.message)
+
+      if (attempts >= 3) {
+        console.log("[UPLOAD FAILED FINAL]", part.index + 1)
+        throw err
+      }
+    }
+  }
 }
-
-})
-
-const parts = await Promise.all(uploadTasks)
 
 console.log("all uploads complete")
 
 fs.unlinkSync(tempPath)
 if(fs.existsSync(compressedPath)) fs.unlinkSync(compressedPath)
 
-setProgress(userId,100,"processing complete")
+setProgress(userId,85,"parts uploaded")
+console.log("[PROGRESS] 85 parts uploaded")
 
-const thumbnailUrl = await generateThumbnail(parts[0].url, crypto.randomUUID())
+setProgress(userId,90,"generating thumbnail")
+console.log("[PROGRESS] 90 generating thumbnail")
+
+const firstPartUrl = parts[0]?.url
+console.log("[THUMBNAIL SOURCE]", firstPartUrl)
+
+const thumbnailUrl = await generateThumbnail(
+  firstPartUrl,
+  crypto.randomUUID(),
+  false
+)
+
 console.log("thumbnailUrl created", thumbnailUrl)
 
 return {
-isSingle:false,
-parts,
-thumbnailUrl
+  isSingle:false,
+  parts,
+  thumbnailUrl
 }
 
 }

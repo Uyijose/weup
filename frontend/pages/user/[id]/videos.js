@@ -4,17 +4,17 @@ import LeftHandSide from "../../../components/LeftHandSide";
 import { useState, useEffect } from "react";
 import { useWatchedHistoryStore } from "../../../stores/watchedHistoryStore";
 import { useUsersStore } from "../../../stores/usersStore";
+import { usePostsStore } from "../../../stores/postsStore";
 import { supabase } from "../../../utils/supabaseClient";
-import VideoModal from "../../../components/VideoModal";
 
 const UserVideosPage = ({ user, videos }) => {
   const router = useRouter();
   const [mobileMenu, setMobileMenu] = useState(false);
   const [pageVideos, setPageVideos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedVideo, setSelectedVideo] = useState(null);
   const watchedVideos = useWatchedHistoryStore(state => state.watchedVideos);
   const fetchWatchedHistory = useWatchedHistoryStore(state => state.fetchWatchedHistory);
+  const hydrateWatchedFeed = usePostsStore(state => state.hydrateWatchedFeed);
 
   const usersMap = useUsersStore(state => state.usersMap);
   const fetchUserById = useUsersStore(state => state.fetchUserById);
@@ -24,11 +24,6 @@ const UserVideosPage = ({ user, videos }) => {
   useEffect(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-
-    console.log("WATCHED VIDEOS:", watchedVideos);
-    console.log("CURRENT PAGE:", currentPage);
-    console.log("PAGE RANGE:", start, end);
-
     setPageVideos(watchedVideos.slice(start, end));
   }, [currentPage, watchedVideos]);
 
@@ -36,8 +31,6 @@ const UserVideosPage = ({ user, videos }) => {
 
   useEffect(() => {
     if (!user?.id) return;
-
-    console.log("FETCH WATCHED HISTORY FOR USER:", user.id);
     fetchWatchedHistory(user.id);
   }, [user?.id]);
 
@@ -45,14 +38,16 @@ const UserVideosPage = ({ user, videos }) => {
     const fetchCreators = async () => {
       for (const video of watchedVideos) {
         if (!video?.user_id) continue;
-
-        console.log("FETCH VIDEO OWNER:", video.id, video.user_id);
-
         await fetchUserById(video.user_id);
       }
     };
 
     fetchCreators();
+  }, [watchedVideos]);
+
+  useEffect(() => {
+    if (!watchedVideos.length) return;
+    hydrateWatchedFeed(watchedVideos);
   }, [watchedVideos]);
 
   const renderPagination = () => {
@@ -82,7 +77,6 @@ const UserVideosPage = ({ user, videos }) => {
               key={`page-${p}`}
               className={`pagination-btn ${p === currentPage ? "active" : ""}`}
               onClick={() => {
-                console.log("GO TO PAGE", p);
                 setCurrentPage(p);
               }}
             >
@@ -122,8 +116,13 @@ const UserVideosPage = ({ user, videos }) => {
                     onContextMenu={(e) => e.preventDefault()}
                     onDragStart={(e) => e.preventDefault()}
                     onClick={() => {
-                      console.log("OPEN MODAL VIDEO", video.id);
-                      setSelectedVideo(video);
+                      if (video.parent_post_id && video.id !== video.parent_post_id) {
+                        router.push(
+                          `/posts/${video.parent_post_id}?part=${video.topic?.replace("Part ", "")}&feed=watched`
+                        );
+                      } else {
+                        router.push(`/posts/${video.id}?feed=watched`);
+                      }
                     }}
                   />
                   <div className="video-info">
@@ -131,13 +130,6 @@ const UserVideosPage = ({ user, videos }) => {
                     <p className="video-creator">
                       {(() => {
                         const videoOwner = usersMap[video.user_id];
-
-                        console.log("VIDEO OWNER LOOKUP:", {
-                          videoId: video.id,
-                          videoUserId: video.user_id,
-                          owner: videoOwner
-                        });
-
                         if (videoOwner?.creator_username) {
                           return `@${videoOwner.creator_username}`;
                         }
@@ -158,31 +150,17 @@ const UserVideosPage = ({ user, videos }) => {
           {renderPagination()}
         </div>
       </main>
-
-      {selectedVideo && (
-        <VideoModal
-          videoData={selectedVideo}
-          onClose={() => setSelectedVideo(null)}
-        />
-      )}
     </div>
   );
 };
 
 export async function getServerSideProps({ params }) {
-  console.log("GET SERVER SIDE PROPS USER ID:", params.id);
-
   const { data: user, error } = await supabase
     .from("users")
     .select("*")
     .eq("id", params.id)
     .single();
-
-  console.log("SERVER USER FETCH:", user);
-  console.log("SERVER USER ERROR:", error);
-
   if (error || !user) {
-    console.log("USER NOT FOUND");
     return { notFound: true };
   }
 

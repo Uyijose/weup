@@ -11,7 +11,6 @@ const AdminHeader = ({ title = "Admin Dashboard" }) => {
       const { data: sessionData } = await supabase.auth.getSession();
       const currentUser = sessionData.session?.user;
       if (!currentUser) {
-        console.log("AdminHeader: no user session, redirecting");
         if (typeof window !== "undefined") router.push("/");
         return;
       }
@@ -23,25 +22,21 @@ const AdminHeader = ({ title = "Admin Dashboard" }) => {
         .single();
 
       if (error || !profile) {
-        console.log("AdminHeader: failed fetching profile, redirecting", error);
         if (typeof window !== "undefined") router.push("/");
         return;
       }
 
       if (!profile.is_admin) {
-        console.log("AdminHeader: user is not admin, redirecting", profile.id);
         if (typeof window !== "undefined") router.push("/");
         return;
       }
 
       setUser(profile);
-      console.log("AdminHeader: admin access granted", profile.id);
     };
     fetchUser();
   }, []);
 
   if (!user) {
-    console.log("AdminHeader: waiting for admin verification");
     return null;
   }
 

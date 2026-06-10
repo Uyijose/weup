@@ -13,13 +13,9 @@ const BecomeCreatorModal = ({ onClose }) => {
     const getUser = async () => {
       const { data } = await supabase.auth.getSession();
 
-      console.log("Become creator modal session:", data);
-
       if (data.session?.user) {
-        console.log("Logged in user found:", data.session.user.id);
         setUser(data.session.user);
       } else {
-        console.log("No logged in user found");
         setUser(null);
       }
     };
@@ -52,7 +48,6 @@ const BecomeCreatorModal = ({ onClose }) => {
                   router.push("/creator/become-creator");
                   return;
                 }
-                console.log("User not logged in, showing toast");
                 toast.error("You must be logged in to become a creator", {
                   position: "top-center",
                   autoClose: 5000,
@@ -66,7 +61,6 @@ const BecomeCreatorModal = ({ onClose }) => {
                   progressClassName: "creator-toast-progress"
                 });
                 setTimeout(() => {
-                  console.log("Redirecting to signin page");
                   router.push("/auth/signin");
                 }, 5000);
               }}

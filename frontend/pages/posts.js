@@ -10,12 +10,21 @@ export default function Posts() {
   return (
     <div>
       <Head>
-        <title>weup - Posts</title>
-        <meta name="description" content="All posts feed" />
-        <link
-          rel="icon"
-          href="https://th.bing.com/th/id/R.67bc88bb600a54112e8a669a30121273?rik=vsc22vMfmcSGfg&pid=ImgRaw&r=0"
-        />
+        <title>WeUp - Posts</title>
+
+        <meta name="description" content="Browse all posts on WeUp." />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="WeUp - Posts" />
+        <meta property="og:description" content="Browse all posts on WeUp." />
+        <meta property="og:url" content="https://weup-dun.vercel.app/posts" />
+        <meta property="og:image" content="https://whosup.fun/whosup-icon.PNG" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://whosup.fun/whosup-icon.PNG" />
+
       </Head>
 
       <Header

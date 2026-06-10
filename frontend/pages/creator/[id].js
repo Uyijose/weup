@@ -5,7 +5,6 @@ import { supabase } from "../../utils/supabaseClient";
 import Header from "../../components/Header";
 import avatarFallback from "../../components/assets/avatar-fallback.jpg";
 import LeftHandSide from "../../components/LeftHandSide";
-import VideoModal from "../../components/VideoModal";
 
 
 const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
@@ -18,7 +17,6 @@ const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
   const [creatorData, setCreatorData] = useState(() => initialCreatorData);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loadingSub, setLoadingSub] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState(null);
 
   useEffect(() => {
     setCreatorData(initialCreatorData);
@@ -40,9 +38,6 @@ const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
         .eq("subscriber_id", authUser.id)
         .eq("creator_id", creatorData.id)
         .maybeSingle();
-
-      console.log("SUB CHECK RESULT:", data, error);
-
       setIsSubscribed(!!data);
     };
 
@@ -102,10 +97,8 @@ const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
 
     const data = await res.json();
       if (data.success) {
-        console.log("Video deleted successfully:", videoId);
         setVideosState(prev => prev.filter(v => v.id !== videoId));
       } else {
-        console.log("Failed to delete video:", videoId);
         alert("Failed to delete video");
       }
     };
@@ -117,35 +110,35 @@ return (
     <Head>
       <title>
         {creatorData
-          ? `${creatorData.platform_title?.slice(0, 35)}${creatorData.platform_title && creatorData.platform_title.length > 35 ? "..." : ""} | weup`
-          : "weup"}
+          ? `${creatorData.platform_title?.slice(0, 35)}${creatorData.platform_title && creatorData.platform_title.length > 35 ? "..." : ""} | WeUp`
+          : "WeUp"}
       </title>
 
       <meta
         name="description"
-        content={creatorData?.creator_description || "Watch and subscribe to creators on weup."}
+        content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."}
       />
       
       <link
         rel="canonical"
-        href={`https://weup.fun/creator/${creatorData?.creator_username}`}
+        href={`https://whosup.fun/creator/${creatorData?.creator_username}`}
       />
       <meta name="robots" content="index, follow" />
 
       <meta property="og:type" content="website" />
-      <meta property="og:title" content={creatorData?.platform_title || "weup"} />
-      <meta property="og:description" content={creatorData?.creator_description || "Watch and subscribe to creators on weup."} />
-      <meta property="og:url" content={`https://weup.fun/creator/${creatorData?.creator_username}`} />
-      <meta property="og:image:alt" content={creatorData?.platform_title || "weup creator"} />
-      <meta property="og:site_name" content="weup" />
+      <meta property="og:title" content={creatorData?.platform_title || "WeUp"} />
+      <meta property="og:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."} />
+      <meta property="og:url" content={`https://whosup.fun/creator/${creatorData?.creator_username}`} />
+      <meta property="og:image:alt" content={creatorData?.platform_title || "WeUp creator"} />
+      <meta property="og:site_name" content="WeUp" />
       <meta
         property="og:image"
-        content={creatorData?.creator_avatar_url || "https://weup.fun/default-preview.jpg"}
+        content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
       />
 
       <meta
         property="og:image:secure_url"
-        content={creatorData?.creator_avatar_url || "https://weup.fun/default-preview.jpg"}
+        content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
       />
 
       <meta property="og:image:type" content="image/jpeg" />
@@ -153,9 +146,9 @@ return (
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={creatorData?.platform_title || "weup"} />
-      <meta name="twitter:description" content={creatorData?.creator_description || "Watch and subscribe to creators on weup."} />
-      <meta name="twitter:image" content={creatorData?.creator_avatar_url || "https://weup.fun/default-preview.jpg"} />
+      <meta name="twitter:title" content={creatorData?.platform_title || "WeUp"} />
+      <meta name="twitter:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."} />
+      <meta name="twitter:image" content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"} />
       <meta name="twitter:image:src" content={creatorData?.creator_avatar_url} />
 
       <link
@@ -242,12 +235,7 @@ return (
               </div>
             ) : (
               videosState.slice(0, 16).map((video, index) => {
-                console.log("RENDER CREATOR PROFILE VIDEO:", {
-                  index,
-                  id: video.id,
-                  caption: video.caption
-                });
-
+            
                 return (
                   <div key={video.id} className="creator-video-wrapper">
                     <video
@@ -258,14 +246,45 @@ return (
                       controls={false}
                       disablePictureInPicture
                       controlsList="nodownload noplaybackrate nofullscreen"
-                      onContextMenu={(e) => e.preventDefault()}
-                      onDragStart={(e) => e.preventDefault()}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        console.log("[VIDEO CONTEXT MENU BLOCKED]", video.id);
+                      }}
+                      onDragStart={(e) => {
+                        e.preventDefault();
+                        console.log("[VIDEO DRAG BLOCKED]", video.id);
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("[VIDEO CLICK IGNORED - USE BUTTON]", video.id);
+                      }}
                     />
                     <div
                       className="video-play-button"
-                      onClick={() => {
-                        console.log("OPEN MODAL VIDEO", video.id);
-                        setSelectedVideo(video);
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const hasParts = Array.isArray(video.video_parts) && video.video_parts.length > 0;
+
+                        const route = hasParts
+                          ? `/posts/${video.id}?part=1&feed=creator&creator=${creatorData.id}`
+                          : `/posts/${video.id}?feed=creator&creator=${creatorData.id}`;
+
+                        console.log("[CREATOR NAVIGATION FIX]", {
+                          videoId: video.id,
+                          hasParts,
+                          route
+                        });
+
+                        console.log("[CREATOR VIDEO CLICK -> NAVIGATE FIXED]", {
+                          videoId: video.id,
+                          creatorId: creatorData.id,
+                          route
+                        });
+
+                        window.location.href = route;
                       }}
                     >
                       ▶
@@ -274,13 +293,6 @@ return (
                     <div className="video-caption">
                       {(() => {
                         const caption = video.caption || "No caption";
-
-                        console.log("CREATOR VIDEO CAPTION:", {
-                          id: video.id,
-                          originalCaption: caption,
-                          length: caption.length
-                        });
-
                         return caption.length > 15
                           ? caption.slice(0, 15) + "..."
                           : caption;
@@ -309,8 +321,6 @@ return (
               <button
                 className="creator-view-more-btn"
                 onClick={() => {
-                  console.log("OPEN CREATOR FULL VIDEO PAGE", creatorData.creator_username);
-
                   router.push(
                     `/creator/${creatorData.creator_username}/videos`
                   );
@@ -322,12 +332,6 @@ return (
           )}
         </div>
       </main>
-      {selectedVideo && (
-        <VideoModal
-          videoData={selectedVideo}
-          onClose={() => setSelectedVideo(null)}
-        />
-      )}
     </div>
   );
 };
@@ -345,7 +349,20 @@ export async function getServerSideProps({ params }) {
 
   const { data: posts } = await supabase
     .from("posts")
-    .select("*")
+    .select(`
+      *,
+      video_parts (
+        id,
+        post_id,
+        part_number,
+        video_url,
+        likes_count,
+        comments_count,
+        views_count,
+        created_at,
+        user_id
+      )
+    `)
     .eq("user_id", creator.id)
     .order("created_at", { ascending: false });
   return {

@@ -9,10 +9,10 @@ export const useUploadVideoStore = create((set, get) => ({
   tagError: "",
 
   selectedFile: null,
-
-  loading: false,
   uploadProgress: 0,
   uploadMessage: "",
+  progressInterval: null,
+  redirecting: false,
 
   setCaption: (caption) => {
     set({ caption });
@@ -40,31 +40,92 @@ export const useUploadVideoStore = create((set, get) => ({
       selectedFile: null,
       loading: false,
       uploadProgress: 0,
-      uploadMessage: ""
+      uploadMessage: "",
+      redirecting: false
     });
   },
 
+  clearProgressInterval: () => {
+    const existing = get().progressInterval;
+    if (existing) {
+      clearInterval(existing);
+      console.log("[PROGRESS] interval cleared");
+    }
+    set({ progressInterval: null });
+  },
+
   trackProgress: async (userId, token) => {
+    if (!token || !userId) {
+      return;
+    }
+
+    const existing = get().progressInterval;
+    if (existing) {
+      clearInterval(existing);
+    }
+
     const interval = setInterval(async () => {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/videos/progress/${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
+      try {
+        const sessionRefresh = await supabase.auth.getSession()
+        const freshToken = sessionRefresh?.data?.session?.access_token
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/videos/progress/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${freshToken}`
+            }
           }
+        )
+        if (!res.ok) {
+          clearInterval(interval);
+          set({ progressInterval: null, loading: false });
+          return;
         }
-      );
 
-      const data = await res.json();
-      set({
-        uploadProgress: data.percent,
-        uploadMessage: data.message
-      });
+        const data = await res.json();
+        set((state) => {
+          console.log("[PROGRESS UPDATE]", {
+            current: state.uploadProgress,
+            incoming: data?.percent,
+            message: data?.message
+          });
 
-      if (data.percent >= 100) {
+          if (data?.percent === 0 && data?.message?.includes("failed")) {
+            console.log("[FRONTEND DETECTED FAILURE]", data);
+
+            clearInterval(interval);
+
+            return {
+              uploadProgress: 0,
+              uploadMessage: data.message,
+              loading: false,
+              progressInterval: null
+            };
+          }
+
+          return {
+            uploadProgress: data?.percent ?? state.uploadProgress,
+            uploadMessage: data?.message ?? state.uploadMessage
+          };
+        });
+
+        if (data?.percent >= 100) {
+          console.log("[FRONTEND] backend reached 100");
+
+          clearInterval(interval);
+
+          set({
+            progressInterval: null,
+            uploadProgress: 100,
+            uploadMessage: "processing complete"
+          });
+        }
+      } catch (err) {
         clearInterval(interval);
+        set({ progressInterval: null });
       }
     }, 1000);
+    set({ progressInterval: interval });
   },
 
   handlePost: async (router) => {
@@ -79,6 +140,12 @@ export const useUploadVideoStore = create((set, get) => ({
     if (!selectedFile) {
       return;
     }
+
+    if (get().loading) {
+      console.log("[UPLOAD BLOCKED] already uploading")
+      return;
+    }
+
     set({ loading: true });
 
     try {
@@ -100,49 +167,148 @@ export const useUploadVideoStore = create((set, get) => ({
         }
       );
       const uploadData = await uploadRes.json();
-      await fetch(uploadData.uploadUrl, {
-        method: "PUT",
-        body: selectedFile.file,
-        headers: {
-          "Content-Type": selectedFile.file.type || "video/mp4"
-        }
+      if (selectedFile.file.size > 50 * 1024 * 1024) {
+        throw new Error("FILE_TOO_LARGE_FOR_SINGLE_UPLOAD");
+      }
+
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.open("PUT", uploadData.uploadUrl);
+
+        xhr.setRequestHeader(
+          "Content-Type",
+          selectedFile.file.type || "video/mp4"
+        );
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.min(
+              Math.floor((event.loaded / event.total) * 10),
+              9
+            );
+
+            console.log("[UPLOAD FRONTEND]", {
+              loaded: event.loaded,
+              total: event.total,
+              percent
+            });
+
+            set({
+              uploadProgress: percent,
+              uploadMessage: "uploading video"
+            });
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            console.log("[UPLOAD COMPLETE]");
+            resolve();
+          } else {
+            reject(new Error("UPLOAD_FAILED"));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error("UPLOAD_FAILED"));
+        };
+
+        xhr.send(selectedFile.file);
       });
+
+      console.log("[UPLOAD DONE] switching to backend progress");
+
       set({
-        uploadProgress: 50,
-        uploadMessage: "upload complete, processing video"
+        uploadProgress: 10,
+        uploadMessage: "upload complete, waiting for download to begin...",
+        loading: true
       });
 
       const session = await supabase.auth.getSession();
-      const userId = session.data.session.user.id;
+      const userId = session?.data?.session?.user?.id;
+      const tokenForProgress = session?.data?.session?.access_token;
 
-      trackProgress(userId, token);
-
-      const processRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/videos/process`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            fileKey: uploadData.fileKey,
-            caption,
-            topic: topic === "Other" ? hashTags : topic
-          })
+      if (!userId || !tokenForProgress) {
+      } else {
+        trackProgress(userId, tokenForProgress);
+      }
+      let processRes;
+      let data = null;
+      try {
+        processRes = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/videos/process`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fileKey: uploadData.fileKey,
+              caption,
+              topic: topic === "Other" ? hashTags : topic
+            })
+          }
+        );
+        try {
+          data = await processRes.json();
+        } catch (err) {
+          console.log("[PROCESS] json parse failed");
         }
-      );
 
-      const data = await processRes.json();
+      } catch (err) {
+        console.log("[PROCESS] request failed", err.message);
+      }
+      console.log("[FRONTEND] waiting for backend to reach 100");
+
       set({
-        uploadProgress: 100,
-        uploadMessage: "processing complete",
-        loading: false
+        uploadMessage: "processing video...",
       });
 
-      setTimeout(() => {
-        router.push(data.postId ? `/posts/${data.postId}` : "/");
-      }, 2000);
+      const checkReadyAndRedirect = () => {
+        const state = get();
+
+        console.log("[REDIRECT CHECK]", {
+          progress: state.uploadProgress,
+          hasData: !!data,
+          success: data?.success
+        });
+
+        if (!data) {
+          setTimeout(checkReadyAndRedirect, 1000);
+          return;
+        }
+
+        if (data.success === false) {
+          console.log("[REDIRECT ABORTED — BACKEND FAILED]", data);
+          set({ loading: false });
+          return;
+        }
+
+        if (state.uploadProgress < 100) {
+          setTimeout(checkReadyAndRedirect, 1000);
+          return;
+        }
+
+        console.log("[REDIRECT CONFIRMED @100%]");
+
+        console.log("[REDIRECT CONFIRMED]");
+        console.log("[UI LOCK] redirect overlay enabled");
+
+        set({
+          redirecting: true,
+          uploadMessage: "Redirecting to your post...",
+          loading: true
+        });
+
+        if (data.hasParts) {
+          router.push(`/posts/${data.postId}?part=1`);
+        } else {
+          router.push(`/posts/${data.postId}`);
+        }
+      };
+
+      checkReadyAndRedirect();
     } catch (err) {
       set({ loading: false });
     }
@@ -179,6 +345,7 @@ export const useUploadVideoStore = create((set, get) => ({
       const publicUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${uploadData.fileKey}`;
       return publicUrl;
     } catch (err) {
+      console.log("upload error", err.message);
       return null;
     }
   }

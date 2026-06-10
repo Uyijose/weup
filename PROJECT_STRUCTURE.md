@@ -63,7 +63,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── admin_system_plan.md
 │   ├── ads_system.md
 │   ├── creator_system_plan.md
-│   └── WhosUp_Ads_Frontend_Integration_Guide.md
+│   └── WeUp_Ads_Frontend_Integration_Guide.md
 ├── frontend
 │   ├── components
 │   │   ├── ads

@@ -8,7 +8,6 @@ const CustomPosts = ({ video, topic, userId, secondId, postId }) => {
     <div
       className="creator-video-item"
       onClick={() => {
-        console.log("CUSTOM POSTS: REDIRECT TO VIDEO", postId);
         router.push(`/posts/${postId}`);
       }}
     >
@@ -23,15 +22,12 @@ const CustomPosts = ({ video, topic, userId, secondId, postId }) => {
         controlsList="nodownload noplaybackrate nofullscreen"
         onContextMenu={(e) => {
           e.preventDefault();
-          console.log("CUSTOM POSTS: RIGHT CLICK BLOCKED", postId);
         }}
         onDragStart={(e) => {
           e.preventDefault();
-          console.log("CUSTOM POSTS: DRAG BLOCKED", postId);
         }}
         onClick={(e) => {
           e.stopPropagation();
-          console.log("CUSTOM POSTS: VIDEO CLICKED", postId);
         }}
       />
     </div>
