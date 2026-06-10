@@ -122,10 +122,22 @@ export const useAuthStore = create((set, get) => ({
   },
 
   listenToAuthChanges: () => {
-    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+
+      console.log("[AUTH EVENT]", event);
 
       if (event === "SIGNED_OUT") {
+        console.log("[AUTH] signed out → clearing store");
         useAuthStore.getState().clearAuth();
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        console.log("[AUTH] signed in or refreshed → hydrating auth");
+
+        setTimeout(() => {
+          useAuthStore.getState().hydrateAuth();
+        }, 0);
       }
     });
 

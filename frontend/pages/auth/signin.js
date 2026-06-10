@@ -3,6 +3,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useAuthStore } from "../../stores/authStore";
 import { supabase } from "../../utils/supabaseClient";
 
 const Signin = () => {
@@ -63,8 +64,17 @@ const Signin = () => {
         return;
       }
 
-      console.log("Login successful → redirecting");
-      router.push("/explore");
+      console.log("Login successful → forcing auth sync");
+
+      await supabase.auth.getSession().then((res) => {
+        console.log("[SIGNIN] session after login:", res?.data?.session);
+      });
+
+      await useAuthStore.getState().hydrateAuth();
+
+      console.log("[SIGNIN] auth store hydrated");
+
+      router.push("/");
 
     } catch (err) {
       console.log("Signin error:", err.message);
