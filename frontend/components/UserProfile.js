@@ -5,7 +5,9 @@ import avatarFallback from "./assets/avatar-fallback.jpg";
 import BecomeCreatorModal from "./BecomeCreatorModal";
 import { useAuthStore } from "../stores/authStore";
 import { useUsersStore } from "../stores/usersStore";
+import { useMessagesStore } from "../stores/messagesStore";
 import { useWatchedHistoryStore } from "../stores/watchedHistoryStore";
+import { FiMessageCircle } from "react-icons/fi";
 
 const UserProfile = () => {
   const router = useRouter();
@@ -19,6 +21,7 @@ const UserProfile = () => {
   const [showCreatorModal, setShowCreatorModal] = useState(false);
   const isAdmin = authUser?.is_admin === true;
   const isOwner = authUser && userData && String(authUser.id) === String(userData.id);
+  const { createConversation } = useMessagesStore();
 
   const [pageVideos, setPageVideos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,6 +60,48 @@ const UserProfile = () => {
     fetchWatchedHistory(userData.id);
   }, [userData?.id]);
 
+  const handleMessageClick = async () => {
+    console.log("[PROFILE MESSAGE CLICK]", {
+      authUser,
+      userData,
+      isOwner
+    });
+
+    if (!authUser?.id) {
+      console.log("[BLOCKED] user not logged in");
+      router.push("/auth/signin");
+      return;
+    }
+
+    if (isOwner) {
+      console.log("[OWNER] redirecting to messages list");
+      router.push("/messages");
+      return;
+    }
+
+    try {
+      console.log("[CREATING / FETCHING CONVERSATION]");
+      const res = await createConversation(
+        [authUser.id, userData.id],
+        false,
+        null
+      );
+
+      const id = res?.conversation?.id;
+
+      console.log("[CONVERSATION RESULT]", res);
+
+      if (id) {
+        console.log("[NAVIGATING TO CHAT]", id);
+        router.push(`/messages/${id}`);
+        return;
+      }
+
+      console.log("[FAILED] no conversation id");
+    } catch (err) {
+      console.log("[MESSAGE CLICK ERROR]", err);
+    }
+  };
 
   if (!userData) {
     return null;
@@ -118,6 +163,14 @@ const UserProfile = () => {
             Edit profile
           </button>
         )}
+        {authUser && (
+        <button
+          className="messages-profile-btn"
+          onClick={handleMessageClick}
+        >
+          Messages
+        </button>
+      )}
         {userData.is_creator && userData.creator_username && (
           <button
             className="creator-btn"

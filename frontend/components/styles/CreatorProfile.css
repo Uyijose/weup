@@ -24,6 +24,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .creator-hero-left {
@@ -298,6 +300,51 @@
   left: 130%;
 }
 
+.messages-profile-btn {
+  padding: 0.85rem 2.2rem;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #EDEDED;
+  transition: all 0.35s ease;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #FF4FA3, #7C4DFF);
+  box-shadow: 0 10px 25px rgba(255, 79, 163, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.messages-profile-btn:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 14px 35px rgba(124, 77, 255, 0.45);
+}
+
+.messages-profile-btn:active {
+  transform: scale(0.95);
+}
+
+.messages-profile-btn::after {
+  content: "";
+  position: absolute;
+  width: 140%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.28),
+    transparent
+  );
+  top: 0;
+  left: -140%;
+  transition: all 0.75s ease;
+}
+
+.messages-profile-btn:hover::after {
+  left: 140%;
+}
+
 .user-actions-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -366,6 +413,11 @@
     width: 100%;
     text-align: center;
     font-size: 0.95rem;
+  }
+
+  .messages-profile-btn {
+    width: 100%;
+    margin-top: 0.1rem;
   }
 }
 

@@ -2,10 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../stores/authStore";
-import { FiSearch, FiUpload, FiMenu } from "react-icons/fi";
+import { FiSearch, FiUpload, FiMessageCircle } from "react-icons/fi";
 import BecomeCreatorModal from "./BecomeCreatorModal";
 import avatarFallback from "./assets/avatar-fallback.jpg";
-// import LeftHandSide from "./LeftHandSide";
 
 const Header = ({ mobileMenu = false, setMobileMenu = () => {} }) => {
   const router = useRouter();
@@ -127,6 +126,17 @@ const Header = ({ mobileMenu = false, setMobileMenu = () => {} }) => {
             >
               <FiSearch className="mobile-icon" />
             </button>
+            {user && (
+              <button
+                className="messages-btn"
+                onClick={() => {
+                  console.log("Navigating to messages");
+                  router.push("/messages");
+                }}
+              >
+                <FiMessageCircle />
+              </button>
+            )}
             {!authLoading && (
               <button
                 onClick={() => {

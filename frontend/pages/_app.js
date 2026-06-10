@@ -20,6 +20,9 @@ import "../components/styles/AdminHeader.css";
 import "../components/styles/Legal.css";
 import "../components/styles/SwipeUpHint.css";
 import "../components/styles/videoModal.css";
+import "../components/styles/Chat.css";
+import "../components/styles/Messages.css";
+import "../components/styles/NewMessage.css";
 
 import Head from "next/head";
 import { useEffect, useState } from 'react';
@@ -275,45 +278,6 @@ function MyApp({ Component, pageProps }) {
       </Script>
 
       <>
-        {/* {showAgeGate && (
-          <div style={styles.overlay}>
-            <div style={styles.modal}>
-              <h2 style={styles.title}>Age Verification</h2>
-              <p style={styles.text}>You must be 18+ to enter</p>
-
-              <div style={{ marginBottom: "20px" }}>
-                <button
-                  onClick={() => {
-                    setSelectedAnswer(true);
-                  }}
-                  style={{
-                    ...styles.button,
-                    marginBottom: "10px",
-                    background: selectedAnswer === true ? "#FF4FA3" : "#241238",
-                  }}
-                >
-                  Yes, I am 18+
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedAnswer(false);
-                  }}
-                  style={{
-                    ...styles.button,
-                    background: selectedAnswer === false ? "#7C4DFF" : "#241238",
-                  }}
-                >
-                  No, I am under 18
-                </button>
-              </div>
-
-              <button onClick={handleAgeSubmit} style={styles.button}>
-                Enter
-              </button>
-            </div>
-          </div>
-        )} */}
         <Component {...pageProps} />
         <ToastContainer
           position="top-center"

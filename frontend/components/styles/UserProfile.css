@@ -97,6 +97,11 @@
   background-color: #FF4FA3;
   color: #1A0033;
 }
+.messages-profile-btn {
+  border: 1px solid #FF4FA3;
+  background-color: transparent;
+  color: #FF4FA3;
+}
 
 /* =========================================
    POSTS GRID

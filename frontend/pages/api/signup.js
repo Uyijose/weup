@@ -1,17 +1,11 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { email, password, fullName, username, avatarUrl, is_adult } = req.body;
-
+  const { email, password, fullName, username, avatarUrl } = req.body;
+  console.log("Signup API received:", email, fullName);
 
   try {
-    if (!is_adult) {
-      console.log("User did not confirm is_adult → blocking signup");
-      return res.status(400).json({ error: "You must confirm that you are 18+ to register" });
-    }
-
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-
     console.log("Backend URL:", BACKEND_URL);
 
     if (!BACKEND_URL) {
@@ -21,11 +15,11 @@ export default async function handler(req, res) {
     const backendRes = await fetch(`${BACKEND_URL}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, fullName, avatarUrl, is_adult }),
+      body: JSON.stringify({ email, password, fullName, avatarUrl }),
     });
 
-
     const data = await backendRes.json();
+    console.log("Backend signup response:", data);
 
     if (!backendRes.ok) throw new Error(data.error || "Signup failed");
     res.status(200).json({ userId: data.userId });

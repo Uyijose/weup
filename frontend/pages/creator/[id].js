@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabaseClient";
+import { useMessagesStore } from "../../stores/messagesStore";
 import Header from "../../components/Header";
 import avatarFallback from "../../components/assets/avatar-fallback.jpg";
 import LeftHandSide from "../../components/LeftHandSide";
@@ -13,10 +14,12 @@ const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
   const { id } = router.query;
 
   const [authUser, setAuthUser] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [videosState, setVideosState] = useState(() => videos || []);
   const [creatorData, setCreatorData] = useState(() => initialCreatorData);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loadingSub, setLoadingSub] = useState(false);
+  const { createConversation } = useMessagesStore();
 
   useEffect(() => {
     setCreatorData(initialCreatorData);
@@ -24,7 +27,10 @@ const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
+      console.log("[CREATOR AUTH SESSION]", data?.session?.user);
+
       setAuthUser(data.session?.user ?? null);
+      setCurrentUserId(data.session?.user?.id ?? null);
     });
   }, []);
 
@@ -105,67 +111,111 @@ const CreatorProfile = ({ creatorData: initialCreatorData, videos }) => {
 
   if (!creatorData) return <p>Loading...</p>;
 
-return (
-  <div className="creator-page-wrapper">
-    <Head>
-      <title>
-        {creatorData
-          ? `${creatorData.platform_title?.slice(0, 35)}${creatorData.platform_title && creatorData.platform_title.length > 35 ? "..." : ""} | WeUp`
-          : "WeUp"}
-      </title>
+  const handleMessageClick = async () => {
+    console.log("[CREATOR MESSAGE CLICK]", {
+      authUser,
+      creatorData
+    });
 
-      <meta
-        name="description"
-        content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."}
-      />
-      
-      <link
-        rel="canonical"
-        href={`https://whosup.fun/creator/${creatorData?.creator_username}`}
-      />
-      <meta name="robots" content="index, follow" />
+    if (!authUser?.id) {
+      console.log("[NOT LOGGED IN] redirecting");
+      router.push("/auth/signin");
+      return;
+    }
 
-      <meta property="og:type" content="website" />
-      <meta property="og:title" content={creatorData?.platform_title || "WeUp"} />
-      <meta property="og:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."} />
-      <meta property="og:url" content={`https://whosup.fun/creator/${creatorData?.creator_username}`} />
-      <meta property="og:image:alt" content={creatorData?.platform_title || "WeUp creator"} />
-      <meta property="og:site_name" content="WeUp" />
-      <meta
-        property="og:image"
-        content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
-      />
+    const isOwner = authUser.id === creatorData.id;
 
-      <meta
-        property="og:image:secure_url"
-        content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
-      />
+    if (isOwner) {
+      console.log("[OWNER] going to messages list");
+      router.push("/messages");
+      return;
+    }
 
-      <meta property="og:image:type" content="image/jpeg" />
+    try {
+      console.log("[CREATING CONVERSATION]");
 
-      <meta property="og:image:width" content="1200" />
-      <meta property="og:image:height" content="630" />
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={creatorData?.platform_title || "WeUp"} />
-      <meta name="twitter:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."} />
-      <meta name="twitter:image" content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"} />
-      <meta name="twitter:image:src" content={creatorData?.creator_avatar_url} />
+      const res = await createConversation(
+        [authUser.id, creatorData.id],
+        false,
+        null
+      );
 
-      <link
-        rel="icon"
-        href="https://th.bing.com/th/id/R.67bc88bb600a54112e8a669a30121273?rik=vsc22vMfmcSGfg&pid=ImgRaw&r=0"
-      />
-    </Head>
-    <Header
-      isOwner={true}
-      mobileMenu={mobileMenu}
-      setMobileMenu={setMobileMenu}
-    />
-    <main>
-      <LeftHandSide
+      console.log("[CONVERSATION RESPONSE]", res);
+
+      const id = res?.conversation?.id;
+
+      if (id) {
+        console.log("[NAVIGATE CHAT]", id);
+        router.push(`/messages/${id}`);
+      } else {
+        console.log("[NO CONVERSATION ID]");
+      }
+    } catch (err) {
+      console.log("[MESSAGE ERROR]", err);
+    }
+  };
+
+  return (
+    <div className="creator-page-wrapper">
+      <Head>
+        <title>
+          {creatorData
+            ? `${creatorData.platform_title?.slice(0, 35)}${creatorData.platform_title && creatorData.platform_title.length > 35 ? "..." : ""} | WeUp`
+            : "WeUp"}
+        </title>
+
+        <meta
+          name="description"
+          content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."}
+        />
+        
+        <link
+          rel="canonical"
+          href={`https://whosup.fun/creator/${creatorData?.creator_username}`}
+        />
+        <meta name="robots" content="index, follow" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={creatorData?.platform_title || "WeUp"} />
+        <meta property="og:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."} />
+        <meta property="og:url" content={`https://whosup.fun/creator/${creatorData?.creator_username}`} />
+        <meta property="og:image:alt" content={creatorData?.platform_title || "WeUp creator"} />
+        <meta property="og:site_name" content="WeUp" />
+        <meta
+          property="og:image"
+          content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
+        />
+
+        <meta
+          property="og:image:secure_url"
+          content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"}
+        />
+
+        <meta property="og:image:type" content="image/jpeg" />
+
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={creatorData?.platform_title || "WeUp"} />
+        <meta name="twitter:description" content={creatorData?.creator_description || "Watch and subscribe to creators on WeUp."} />
+        <meta name="twitter:image" content={creatorData?.creator_avatar_url || "https://whosup.fun/default-preview.jpg"} />
+        <meta name="twitter:image:src" content={creatorData?.creator_avatar_url} />
+
+        <link
+          rel="icon"
+          href="https://th.bing.com/th/id/R.67bc88bb600a54112e8a669a30121273?rik=vsc22vMfmcSGfg&pid=ImgRaw&r=0"
+        />
+      </Head>
+      <Header
+        isOwner={true}
         mobileMenu={mobileMenu}
         setMobileMenu={setMobileMenu}
       />
+      <main>
+        <LeftHandSide
+          mobileMenu={mobileMenu}
+          setMobileMenu={setMobileMenu}
+        />
 
         <div className="creator-profile-container">
 
@@ -193,6 +243,17 @@ return (
                 className={`subscribe-btn ${isSubscribed ? "subscribed" : ""}`}
               >
                 {isSubscribed ? "Subscribed" : "Subscribe"}
+              </button>
+            )}
+            {authUser && (
+              <button
+                className="messages-profile-btn"
+                onClick={() => {
+                  console.log("[CREATOR MESSAGE BTN CLICK]");
+                  handleMessageClick();
+                }}
+              >
+                Messages
               </button>
             )}
           </div>

@@ -23,17 +23,10 @@ const Signup = () => {
     return `${first}${last}${randomDigits}`;
   };
 
-  const [isAdult, setIsAdult] = useState(false);
-
   const handleSignup = async () => {
     setLoading(true);
     setError("");
     try {
-      if (!isAdult) {
-        alert("You must confirm that you are 18+ to register");
-        setLoading(false);
-        return;
-      }
 
       if (password !== confirmPassword) {
         console.log("Passwords do not match", password, confirmPassword);
@@ -59,7 +52,7 @@ const Signup = () => {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName, username, is_adult: isAdult }),
+        body: JSON.stringify({ email, password, fullName, username }),
       });
 
       const result = await res.json();
@@ -163,21 +156,6 @@ const Signup = () => {
             )}
           </span>
         </div>
-
-        <div style={{ marginBottom: "15px", textAlign: "left", color: "#fff" }}>
-          <input
-            type="checkbox"
-            id="isAdult"
-            checked={isAdult}
-            onChange={(e) => {
-              console.log("is_adult checkbox:", e.target.checked);
-              setIsAdult(e.target.checked);
-            }}
-            style={{ marginRight: "10px" }}
-          />
-          <label htmlFor="isAdult">I confirm that I am 18+ years old</label>
-        </div>
-
         <button className="auth-button" onClick={handleSignup} disabled={loading}>
           {loading ? "Signing up..." : "Sign Up"}
         </button>
