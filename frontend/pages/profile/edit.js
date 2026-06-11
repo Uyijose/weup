@@ -93,19 +93,52 @@ export default function EditProfile() {
     }
 
     if (newPassword) {
+      console.log("[PASSWORD] Update requested");
+
       if (newPassword !== confirmPassword) {
+        console.log("[PASSWORD] Mismatch");
         alert("Passwords do not match");
         return;
       }
 
-      const { error } = await supabase.auth.updateUser({
+      if (/\s/.test(newPassword)) {
+        console.log("[PASSWORD] Contains spaces");
+        alert("Password cannot contain spaces");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        console.log("[PASSWORD] Too short");
+        alert("Password must be at least 6 characters");
+        return;
+      }
+
+      console.log("[PASSWORD] Sending update to Supabase");
+
+      const { data, error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
+      console.log("[PASSWORD] Supabase response:", { data, error });
+
       if (error) {
-        alert("Password update failed");
+        console.log("[PASSWORD] Update failed:", error.message);
+
+        if (
+          error.message &&
+          error.message.toLowerCase().includes("different from the old password")
+        ) {
+          alert(
+            "You entered your current password. Please enter a new password different from your old one. If you do not want to change your password, leave the password fields empty."
+          );
+          return;
+        }
+
+        alert("Password update failed. Please try a different password.");
         return;
       }
+
+      console.log("[PASSWORD] Update successful");
     }
 
     if (/\s/.test(username)) {
@@ -115,11 +148,6 @@ export default function EditProfile() {
 
     if (isCreator && /\s/.test(creatorUsername)) {
       alert("Creator Username cannot contain spaces");
-      return;
-    }
-
-    if (newPassword && /\s/.test(newPassword)) {
-      alert("Password cannot contain spaces");
       return;
     }
 
