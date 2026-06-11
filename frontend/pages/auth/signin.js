@@ -166,7 +166,7 @@ const Signin = () => {
           {loading && loadingType === "email" ? "Signing in..." : "Sign In"}
         </button>
 
-        {/* <div className="divider">or</div>
+        <div className="divider">or</div>
 
         <button
           className="google-btn"
@@ -176,7 +176,7 @@ const Signin = () => {
           {loading && loadingType === "google"
             ? "Connecting to Google..."
             : "Continue with Google"}
-        </button> */}
+        </button>
         <p>
           Don&apos;t have an account?{" "}
           <Link href="/auth/signup">Register here</Link>
