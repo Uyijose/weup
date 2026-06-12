@@ -26,6 +26,7 @@ export default function EditProfile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { uploadImage } = useUploadVideoStore();
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function EditProfile() {
 
       if (!sessionUser) {
         router.push("/login");
+        setIsSaving(false);
         return;
       }
 
@@ -62,23 +64,15 @@ export default function EditProfile() {
     getUser();
   }, []);
 
-  // const uploadAvatar = async (file) => {
-  //   const formData = new FormData();
-  //   formData.append("file", file);
-
-  //   const r2Res = await fetch("/api/uploadVideo", {
-  //     method: "POST",
-  //     body: formData,
-  //   });
-
-  //   const r2Data = await r2Res.json();
-
-  //   if (!r2Data.url) return null;
-
-  //   return r2Data.url;
-  // };
-
   const handleUpdate = async () => {
+    if (isSaving) {
+      console.log("[SAVE] Blocked duplicate click");
+      return;
+    }
+
+    console.log("[SAVE] Started");
+    setIsSaving(true);
+
     let avatarUrl = avatarPreview;
     let creatorAvatarUrl = creatorAvatarPreview;
 
@@ -98,18 +92,21 @@ export default function EditProfile() {
       if (newPassword !== confirmPassword) {
         console.log("[PASSWORD] Mismatch");
         alert("Passwords do not match");
+        setIsSaving(false);
         return;
       }
 
       if (/\s/.test(newPassword)) {
         console.log("[PASSWORD] Contains spaces");
         alert("Password cannot contain spaces");
+        setIsSaving(false);
         return;
       }
 
       if (newPassword.length < 6) {
         console.log("[PASSWORD] Too short");
         alert("Password must be at least 6 characters");
+        setIsSaving(false);
         return;
       }
 
@@ -131,10 +128,12 @@ export default function EditProfile() {
           alert(
             "You entered your current password. Please enter a new password different from your old one. If you do not want to change your password, leave the password fields empty."
           );
+          setIsSaving(false);
           return;
         }
 
         alert("Password update failed. Please try a different password.");
+        setIsSaving(false);
         return;
       }
 
@@ -143,11 +142,13 @@ export default function EditProfile() {
 
     if (/\s/.test(username)) {
       alert("Username cannot contain spaces");
+      setIsSaving(false);
       return;
     }
 
     if (isCreator && /\s/.test(creatorUsername)) {
       alert("Creator Username cannot contain spaces");
+      setIsSaving(false);
       return;
     }
 
@@ -174,14 +175,16 @@ export default function EditProfile() {
       console.log("Profile update error:", error);
       if (error.code === "23505" || error.details?.includes("username")) {
         alert("This username is already taken. Please choose another.");
+        setIsSaving(false);
         return;
       }
       alert("Failed to update profile. Try again.");
+      setIsSaving(false);
       return;
     }
 
+    setIsSaving(false);
     router.push(`/user/${user.id}`);
-
   };
 
   return (
@@ -340,8 +343,20 @@ export default function EditProfile() {
         </span>
       </div>
 
-      <button className="edit-save-btn" onClick={handleUpdate}>
-        Save Changes
+      <button
+        className={`edit-save-btn ${isSaving ? "loading" : ""}`}
+        onClick={handleUpdate}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <span className="wave-loader">
+            <span />
+            <span />
+            <span />
+          </span>
+        ) : (
+          "Save Changes"
+        )}
       </button>
     </div>
   );

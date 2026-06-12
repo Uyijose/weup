@@ -80,7 +80,23 @@ const BecomeCreator = () => {
     let creatorAvatarUrl = null;
 
     if (creatorAvatarFile) {
-      creatorAvatarUrl = await uploadImage(creatorAvatarFile);
+      console.log("[CREATOR] Avatar file detected:", creatorAvatarFile.name);
+
+      const uploadResult = await uploadImage(creatorAvatarFile);
+      console.log("[CREATOR] Upload result:", uploadResult);
+
+      if (typeof uploadResult === "string") {
+        creatorAvatarUrl = uploadResult;
+      } else if (uploadResult?.publicUrl) {
+        creatorAvatarUrl = uploadResult.publicUrl;
+      } else if (uploadResult?.data?.publicUrl) {
+        creatorAvatarUrl = uploadResult.data.publicUrl;
+      } else {
+        console.log("[CREATOR] Avatar upload failed or returned invalid format");
+        creatorAvatarUrl = null;
+      }
+
+      console.log("[CREATOR] Final avatar URL:", creatorAvatarUrl);
     }
 
     const { error: insertError } = await supabase
