@@ -13,6 +13,7 @@ const BecomeCreator = () => {
   const [creatorAvatarFile, setCreatorAvatarFile] = useState(null);
   const [creatorAvatarPreview, setCreatorAvatarPreview] = useState(null);
   const { uploadImage } = useUploadVideoStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -30,6 +31,14 @@ const BecomeCreator = () => {
   }, [router]);
 
   const handleConfirm = async () => {
+    if (isSubmitting) {
+      console.log("[CREATOR] Submission blocked: already submitting");
+      return;
+    }
+
+    console.log("[CREATOR] Submission started");
+    setIsSubmitting(true);
+
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -113,6 +122,7 @@ const BecomeCreator = () => {
       alert("Error submitting request: " + insertError.message);
       return;
     }
+    setIsSubmitting(false);
     alert("Creator request submitted! Wait for admin approval.");
     router.push(`/user/${user.id}`);
   };
@@ -212,10 +222,19 @@ const BecomeCreator = () => {
 
         <div className="creator-page-actions">
           <button
-            className="creator-confirm-btn"
+            className={`creator-confirm-btn ${isSubmitting ? "loading" : ""}`}
             onClick={handleConfirm}
+            disabled={isSubmitting}
           >
-            Confirm Profile Setup
+            {isSubmitting ? (
+              <span className="wave-loader">
+                <span />
+                <span />
+                <span />
+              </span>
+            ) : (
+              "Confirm Profile Setup"
+            )}
           </button>
 
           <button
