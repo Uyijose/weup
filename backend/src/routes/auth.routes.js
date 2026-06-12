@@ -7,11 +7,7 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 
 router.post("/signup", async (req, res) => {
-  const { email, password, fullName, username, avatarUrl, is_adult } = req.body;
-
-  if (!is_adult) {
-    return res.status(400).json({ error: "You must confirm that you are 18+ to register" });
-  }
+  const { email, password, fullName, username, avatarUrl } = req.body;
   
   try {
     let hashedPassword = null;
@@ -93,10 +89,6 @@ router.post("/signup", async (req, res) => {
       if (!existingUser.password && hashedPassword)
         updatedData.password = hashedPassword;
 
-      if (!existingUser.is_adult) {
-        updatedData.is_adult = true;
-      }
-
       if (!existingUser.avatar_url && avatarUrl)
         updatedData.avatar_url = avatarUrl;
 
@@ -119,7 +111,6 @@ router.post("/signup", async (req, res) => {
         username: uniqueUsername,
         password: hashedPassword,
         avatar_url: avatarUrl,
-        is_adult: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });

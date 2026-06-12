@@ -38,9 +38,8 @@ import * as gtag from '../utils/gtag';
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  const { user, loading, hydrateAuth, showAgeGate, checkAgeGate, confirmAdult } = useAuthStore();
+  const { user, loading, hydrateAuth } = useAuthStore();
 
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
   const touchStartY = useRef(0);
   const isRefreshing = useRef(false);
 
@@ -55,14 +54,6 @@ function MyApp({ Component, pageProps }) {
       sub?.unsubscribe?.();
     };
   }, []);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (loading) return;
-    if (showAgeGate) {
-      return;
-    }
-  }, [router.isReady, loading, showAgeGate, router.pathname]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -136,11 +127,6 @@ function MyApp({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
-    checkAgeGate();
-  }, [loading, user]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const handler = () => {
@@ -158,20 +144,6 @@ function MyApp({ Component, pageProps }) {
       window.removeEventListener("touchstart", handler);
     };
   }, []);
-
-  const handleAgeSubmit = async () => {
-    if (selectedAnswer === null) {
-      alert("Please select an option");
-      return;
-    }
-
-    if (!selectedAnswer) {
-      window.location.href = "https://www.google.com";
-      return;
-    }
-
-    await confirmAdult();
-  };
 
   // Track page views on route change
   useEffect(() => {

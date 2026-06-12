@@ -7,7 +7,6 @@ export const useAuthStore = create((set, get) => ({
   token: null,
   loading: true,
   hydrating: false,
-  showAgeGate: false,
 
   hydrateAuth: async () => {
     if (get().hydrating) {
@@ -58,48 +57,6 @@ export const useAuthStore = create((set, get) => ({
       });
     } catch (err) {
       set({ user: null, token: null, loading: false, hydrating: false });
-    }
-  },
-
-  checkAgeGate: async () => {
-    const { user } = get();
-    if (!user) {
-      const storedAdult = localStorage.getItem("is_adult");
-      if (!storedAdult) {
-        set({ showAgeGate: true });
-        return;
-      }
-      set({ showAgeGate: false });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("users")
-      .select("is_adult")
-      .eq("id", user.id)
-      .single();
-    if (error || !data?.is_adult) {
-      set({ showAgeGate: true });
-      return;
-    }
-
-    set({ showAgeGate: false });
-  },
-
-  confirmAdult: async () => {
-    const { user } = get();
-    if (!user) {
-      localStorage.setItem("is_adult", "true");
-      set({ showAgeGate: false });
-      return;
-    }
-
-    const { error } = await supabase
-      .from("users")
-      .update({ is_adult: true })
-      .eq("id", user.id);
-    if (!error) {
-      set({ showAgeGate: false });
     }
   },
 

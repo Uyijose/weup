@@ -24,16 +24,13 @@ export async function requireAuth(req, res, next) {
 
   const { data: dbUser, error: dbError } = await supabase
     .from("users")
-    .select("is_adult")
+    .select("*")
     .eq("id", userId)
     .single();
 
   if (dbError || !dbUser) {
+    console.log("[AUTH] User not found in DB", userId);
     return res.status(401).json({ error: "User not found" });
-  }
-
-  if (!dbUser.is_adult) {
-    return res.status(403).json({ error: "AGE_VERIFICATION_REQUIRED" });
   }
 
   req.user = data.user;
