@@ -876,7 +876,8 @@ const handleProgressPointerDown = (e) => {
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open("https://t.me/+TG0J6XUUGxdmOThk", "_blank");
+                    // window.open("https://t.me/+TG0J6XUUGxdmOThk", "_blank");
+                    window.open("https://wa.me/2348082666215", "_blank");
                   }}
                   className="cursor-pointer"
                   title="Join Telegram"
