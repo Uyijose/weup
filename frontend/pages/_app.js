@@ -58,47 +58,59 @@ function MyApp({ Component, pageProps }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const TRIGGER_DISTANCE = 140;
-    const MAX_PULL = 220;
+    const TRIGGER_DISTANCE = 260;
+    const MAX_PULL = 320;
+    const HORIZONTAL_TOLERANCE = 35;
 
     let startY = 0;
+    let startX = 0;
     let currentY = 0;
-
     let pulling = false;
     let refreshTriggered = false;
-    let startScrollY = 0;
 
     const onTouchStart = (e) => {
-      startScrollY = window.scrollY;
-
-      if (startScrollY !== 0) {
+      if (window.scrollY !== 0) {
         pulling = false;
         return;
       }
 
       startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      currentY = startY;
+
       pulling = true;
       refreshTriggered = false;
+
+      console.log("[PULL] touch start", { startY, startX });
     };
 
     const onTouchMove = (e) => {
       if (!pulling || refreshTriggered) return;
       if (window.scrollY !== 0) return;
 
-      currentY = e.touches[0].clientY;
+      const touch = e.touches[0];
+      const deltaY = touch.clientY - startY;
+      const deltaX = Math.abs(touch.clientX - startX);
 
-      let diff = currentY - startY;
-
-      if (diff < 0) diff = 0;
-
-      const elastic = diff > MAX_PULL ? MAX_PULL + (diff - MAX_PULL) * 0.2 : diff;
-
-      if (elastic > 0) {
-        document.body.style.transform = `translateY(${elastic * 0.25}px)`;
+      if (deltaX > HORIZONTAL_TOLERANCE) {
+        pulling = false;
+        document.body.style.transform = "translateY(0px)";
+        console.log("[PULL] cancelled due to horizontal drag", deltaX);
+        return;
       }
 
-      if (elastic >= TRIGGER_DISTANCE) {
-      }
+      if (deltaY <= 0) return;
+
+      currentY = touch.clientY;
+
+      const elastic =
+        deltaY > MAX_PULL
+          ? MAX_PULL + (deltaY - MAX_PULL) * 0.15
+          : deltaY;
+
+      document.body.style.transform = `translateY(${elastic * 0.18}px)`;
+
+      console.log("[PULL] pulling", { deltaY, elastic });
     };
 
     const onTouchEnd = () => {
@@ -107,8 +119,12 @@ function MyApp({ Component, pageProps }) {
       if (!pulling) return;
 
       const finalDiff = currentY - startY;
+
+      console.log("[PULL] touch end", { finalDiff });
+
       if (finalDiff >= TRIGGER_DISTANCE && window.scrollY === 0) {
         refreshTriggered = true;
+        console.log("[PULL] REFRESH TRIGGERED");
         window.location.reload();
       }
 
