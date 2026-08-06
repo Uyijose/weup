@@ -1,488 +1,151 @@
 # WeUp Expo Migration
 
-# Phase 5 – Post Viewer Migration Plan
+# Phase 5.3 – Comments Screen Migration
 
-The goal of this phase is to migrate the web Post Viewer into a native Expo React Native implementation while keeping the existing business logic (stores, services, Supabase, etc.) and rewriting only the UI.
+## Objective
+
+Migrate the complete web **Comments** experience into a native Expo React Native implementation while preserving the existing business logic.
+
+The current Bottom Sheet implemented during the Post Viewer migration will become the root container for the native comments interface.
+
+This phase focuses on rebuilding the UI while continuing to reuse:
+
+- Supabase
+- Stores
+- Services
+- Authentication
+- Existing API layer
+
+No business logic should be rewritten.
 
 ---
 
 # Overall Roadmap
 
-```
-Phase 5.1
-├── Route
-├── Fetch post
-├── Fullscreen video
-├── Basic autoplay
+```text
+Phase 5.3.1
+├── Native Bottom Sheet
+├── Load Comments
+├── Loading State
+├── Empty State
 
-Phase 5.2
-├── Native Video Player
-├── Play/Pause
-├── Mute
-├── Progress Bar
-├── Seek/Scrubbing
-
-Phase 5.3
-├── User Information
-├── Caption
-├── Topic Tags
+Phase 5.3.2
+├── Comment List
+├── Comment Item
+├── Avatar
+├── Username
+├── Timestamp
 ├── Verified Badge
 
-Phase 5.4
-├── Like Button
-├── Comment Button
-├── Share Button
-├── Report Button
+Phase 5.3.3
+├── Comment Input
+├── Send Comment
+├── Keyboard Handling
+├── Character Counter
 
-Phase 5.5
-├── Comments Bottom Sheet
-├── Comment Count Updates
+Phase 5.3.4
+├── Replies
+├── Nested Replies
+├── Reply Count
+├── Collapse Replies
 
-Phase 5.6
-├── Swipe Between Posts
-├── Preload Videos
-├── Infinite Feed
+Phase 5.3.5
+├── Comment Actions
+├── Like Comment
+├── Report Comment
+├── Delete Comment
+├── Edit Comment
 
-Phase 5.7
-├── Multi-part Videos
-├── Next Part Overlay
+Phase 5.3.6
+├── Realtime Updates
+├── Optimistic Updates
+├── Live Comment Count
+├── Auto Refresh
 
-Phase 5.8
-├── Loading States
+Phase 5.3.7
+├── Pagination
+├── Infinite Scroll
+├── Pull To Refresh
+├── Performance
+
+Phase 5.3.8
 ├── Skeleton UI
-├── Animations
-├── Error Handling
-├── Performance Optimizations
-```
-
----
-
-# Phase 5.1 – Basic Post Viewer
-
-## Objective
-
-Build the first working version of the Post Viewer.
-
-At this stage we are **not** implementing:
-
-- Likes
-- Comments
-- Shares
-- Reports
-- Next Part Overlay
-- Progress Bar
-- Volume Controls
-- Gestures
-
-The only goal is to successfully display and play a video.
-
----
-
-## Features
-
-The screen should:
-
-- Open from `/posts/[id]`
-- Load the selected post
-- Display the video full-screen
-- Auto-play the video
-- Loop the video
-- Tap once to play/pause
-
-Nothing more.
-
----
-
-# Folder Structure
-
-Create the following folders and files.
-
-```
-app/
-└── posts/
-    └── [id].tsx
-
-components/
-└── post/
-    ├── PostViewer.tsx
-    └── PostVideo.tsx
-
-styles/
-└── post/
-    ├── postViewer.styles.ts
-    └── postVideo.styles.ts
-```
-
----
-
-# Future Components
-
-These will be created in later phases.
-
-```
-components/post/
-
-ActionBar.tsx
-
-PostHeader.tsx
-
-PostCaption.tsx
-
-ProgressBar.tsx
-
-NextPartOverlay.tsx
-
-CommentsSheet.tsx
-
-ReportSheet.tsx
+├── Empty State
+├── Error State
+├── Offline Handling
+├── Final Polish
 ```
 
 ---
 
 # Existing Files We'll Reuse
 
-The following file already exists and will continue to be used.
-
-```
-stores/postsStore.ts
-```
-
-We will only extend it with helper methods where necessary.
-
-No major refactoring should be required.
-
----
-
-# Phase 5.2 – Video Controls
-
-After Phase 5.1 is working, implement native video controls using Expo Video.
-
-Features:
-
-- Play
-- Pause
-- Mute
-- Progress Bar
-- Seek
-- Loop
-- Playback State
-
-This replaces the web `<video>` implementation.
-
----
-
-# Phase 5.3 – User Information
-
-Port the creator information section.
-
-Components:
-
-- Avatar
-- Username
-- Verified Badge
-- Caption
-- Topic Hashtags
-
----
-
-# Phase 5.4 – Action Buttons
-
-Migrate the action buttons.
-
-Components:
-
-- Like
-- Comments
-- Share
-- Report
-- Telegram/Community Button
-
----
-
-# Phase 5.5 – Comments
-
-Replace the web modal with a native bottom sheet.
-
-Recommended package:
-
-```
-@gorhom/bottom-sheet
-```
-
-Features:
-
-- Open comments
-- Close comments
-- Update comment count
-- Reply support (future)
-
----
-
-# Phase 5.6 – TikTok Style Feed
-
-Replace the web scrolling container.
-
-Instead of:
-
-```
-RightHandSide.js
-```
-
-Use:
-
-```
-FlatList
-
-pagingEnabled
-
-viewabilityConfig
-
-onViewableItemsChanged
-```
-
-This gives native TikTok-style vertical paging.
-
----
-
-# Phase 5.7 – Multi-Part Videos
-
-Implement:
-
-- Next Part Overlay
-- Automatic Part Detection
-- Continue Watching
-- Next Part Navigation
-
-The overlay should be implemented using React Native animations.
-
----
-
-# Phase 5.8 – Final Polish
-
-Finish the Post Viewer with:
-
-- Loading Skeleton
-- Error States
-- Offline Handling
-- Video Preloading
-- Smooth Animations
-- Performance Improvements
-
----
-
-
-
-
-
-
-
-
-# Phase 5.4 & 5.5 – Actions and Comments
-
-## Objective
-
-Complete the right-side interaction panel and migrate comments to a native bottom sheet.
-
-At the end of these phases, every fullscreen post should support:
-
-- Like
-- Comment
-- Share
-- Report
-- Telegram / Community
-- Native Comment Bottom Sheet
-
----
-
-# Recommended Package
-
-```bash
-npm install @gorhom/bottom-sheet
-npx expo install react-native-reanimated react-native-gesture-handler
-```
-
----
-
-# Files to Edit
-
-```text
-components/feed/PostCard.tsx
-components/feed/LikeButton.tsx
-components/feed/ShareButton.tsx
-components/feed/CommentSheet.tsx
-styles/feed/postCard.styles.ts
-styles/feed/likeButton.styles.ts
-styles/feed/shareButton.styles.ts
-```
-
----
-
-# Files to Create
-
-```text
-components/feed/PostActions.tsx
-styles/feed/postActions.styles.ts
-styles/feed/commentSheet.styles.ts
-```
-
----
-
-# Phase Order
-
-## Phase 5.4.1
-
-Create
-
-```text
-components/feed/PostActions.tsx
-```
-
-Responsibilities
-
-- Right-side action container
-- Like button
-- Comment button
-- Share button
-- Report button
-- Telegram / Community button
-
----
-
-## Phase 5.4.2
-
-Update
-
-```text
-components/feed/LikeButton.tsx
-```
-
-Responsibilities
-
-- Toggle like
-- Display like count
-- Update UI immediately
-
----
-
-## Phase 5.4.3
-
-Update
-
-```text
-components/feed/ShareButton.tsx
-```
-
-Responsibilities
-
-- Native Share API
-- Display share count (if available)
-
----
-
-## Phase 5.4.4
-
-Update
-
-```text
-components/feed/PostCard.tsx
-```
-
-Responsibilities
-
-Render
-
-```text
-VideoPlayer
-
-↓
-
-UserInfo
-
-↓
-
-PostActions
-```
-
-No business logic.
-
----
-
-## Phase 5.4.5
-
-Create
-
-```text
-styles/feed/postActions.styles.ts
-```
-
-Responsibilities
-
-Style
-
-- Right-side floating buttons
-- Spacing
-- Count labels
-
----
-
-# Phase 5.5
-
----
-
-## Phase 5.5.1
-
-Update
+The following files already exist and will continue to be used.
 
 ```text
 components/feed/CommentSheet.tsx
+
+services/comments.service.ts
+
+stores/commentsStore.ts
+
+lib/supabase.ts
 ```
 
-Responsibilities
-
-- Replace modal
-- Use Bottom Sheet
-- Open
-- Close
-- Snap points
+No duplicate business logic should be introduced.
 
 ---
 
-## Phase 5.5.2
-
-Create
-
-```text
-styles/feed/commentSheet.styles.ts
-```
-
-Responsibilities
-
-Style
-
-- Bottom sheet
-- Header
-- Comment list
-- Input area
-
----
-
-## Phase 5.5.3
-
-Connect
+# Existing Files We'll Extend
 
 ```text
 components/feed/PostActions.tsx
+
+components/feed/CommentSheet.tsx
 ```
-
-Responsibilities
-
-- Open CommentSheet
-- Close CommentSheet
-- Display comment count
 
 ---
 
-# Component Flow
+# Folder Structure
+
+## Components
+
+Create the following folder.
+
+```text
+components/
+└── comments/
+    ├── CommentList.tsx
+    ├── CommentItem.tsx
+    ├── CommentInput.tsx
+    ├── ReplyItem.tsx
+    ├── ReplyInput.tsx
+    ├── CommentActions.tsx
+    ├── EmptyComments.tsx
+    └── LoadingComments.tsx
+```
+
+---
+
+## Styles
+
+Create the following folder.
+
+```text
+styles/
+└── comments/
+    ├── commentList.styles.ts
+    ├── commentItem.styles.ts
+    ├── commentInput.styles.ts
+    ├── commentActions.styles.ts
+    ├── replyItem.styles.ts
+    ├── loadingComments.styles.ts
+    └── emptyComments.styles.ts
+```
+
+---
+
+# Component Architecture
 
 ```text
 FeedViewer
@@ -491,30 +154,248 @@ FeedViewer
 
 PostCard
 
-├── VideoPlayer
-├── UserInfo
-└── PostActions
-        │
-        ├── LikeButton
-        ├── Comment
-        ├── ShareButton
-        ├── Report
-        └── Telegram
+↓
+
+PostActions
 
 ↓
 
 CommentSheet
+
+├── CommentList
+│      │
+│      ├── CommentItem
+│      │      │
+│      │      └── CommentActions
+│      │
+│      └── ReplyItem
+│
+└── CommentInput
 ```
+
+---
+
+# Phase 5.3.1 – Bottom Sheet Integration
+
+## Objective
+
+Replace the temporary placeholder with a fully functional native comments container.
+
+---
+
+## Files to Edit
+
+```text
+components/feed/CommentSheet.tsx
+```
+
+---
+
+## Responsibilities
+
+- Load comments
+- Display loading indicator
+- Display empty state
+- Scrollable comment list
+- Close Bottom Sheet
+- Connect to existing comment service
+
+---
+
+# Phase 5.3.2 – Comment List
+
+## Objective
+
+Render the complete list of comments.
+
+---
+
+## Files to Create
+
+```text
+components/comments/CommentList.tsx
+
+components/comments/CommentItem.tsx
+```
+
+---
+
+## Responsibilities
+
+Display:
+
+- User avatar
+- Username
+- Verified badge
+- Timestamp
+- Comment text
+- Like count
+
+---
+
+# Phase 5.3.3 – Comment Input
+
+## Objective
+
+Allow authenticated users to post comments.
+
+---
+
+## Files to Create
+
+```text
+components/comments/CommentInput.tsx
+```
+
+---
+
+## Responsibilities
+
+- Text input
+- Send button
+- Keyboard avoidance
+- Character counter
+- Disable while posting
+- Clear input after successful send
+
+---
+
+# Phase 5.3.4 – Replies
+
+## Objective
+
+Support threaded conversations.
+
+---
+
+## Files to Create
+
+```text
+components/comments/ReplyItem.tsx
+
+components/comments/ReplyInput.tsx
+```
+
+---
+
+## Responsibilities
+
+- Reply to comment
+- View replies
+- Collapse replies
+- Reply count
+- Nested rendering
+
+---
+
+# Phase 5.3.5 – Comment Actions
+
+## Objective
+
+Support user interaction on comments.
+
+---
+
+## Files to Create
+
+```text
+components/comments/CommentActions.tsx
+```
+
+---
+
+## Responsibilities
+
+- Like comment
+- Report comment
+- Delete own comment
+- Edit own comment
+
+---
+
+# Phase 5.3.6 – Realtime Updates
+
+## Objective
+
+Synchronize comments instantly across users.
+
+---
+
+## Files to Edit
+
+```text
+stores/commentsStore.ts
+
+services/comments.service.ts
+
+components/feed/CommentSheet.tsx
+```
+
+---
+
+## Responsibilities
+
+- Live comments
+- Live comment count
+- Optimistic updates
+- Automatic refresh
+- Supabase realtime integration
+
+---
+
+# Phase 5.3.7 – Pagination
+
+## Objective
+
+Handle large comment threads efficiently.
+
+---
+
+## Responsibilities
+
+- Infinite scrolling
+- Pull to refresh
+- Load more comments
+- Preserve scroll position
+- Reduce unnecessary re-renders
+
+---
+
+# Phase 5.3.8 – Final Polish
+
+## Objective
+
+Complete the production-ready experience.
+
+---
+
+## Responsibilities
+
+- Skeleton loading
+- Empty state
+- Error state
+- Offline support
+- Smooth animations
+- Keyboard polish
+- Performance optimization
 
 ---
 
 # Success Criteria
 
-- Right-side action buttons are displayed.
-- Like button updates correctly.
-- Share uses the native share dialog.
-- Comment button opens a native Bottom Sheet.
-- Bottom Sheet can be dismissed by swipe or backdrop.
-- Comment count is displayed.
-- PostCard remains a layout component only.
-- FeedViewer continues to own playback only.
+- Comment button opens the Bottom Sheet.
+- Comments load using the existing comment service.
+- Loading indicator is displayed while comments are fetched.
+- Empty state appears when no comments exist.
+- Users can add comments.
+- Users can reply to comments.
+- Comment count updates automatically.
+- Like comment functionality works.
+- Report comment functionality works.
+- Delete and edit work for comment owners.
+- Real-time updates synchronize across users.
+- Pagination supports long discussions.
+- Keyboard interaction is smooth on both Android and iOS.
+- Existing stores and services remain the single source of truth.
+- No business logic is duplicated.
+- UI remains fully native and consistent with the rest of the Expo application.

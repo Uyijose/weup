@@ -6,8 +6,6 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 ├── .expo
 │   ├── dev
 │   │   └── logs
-│   ├── static-tmp
-│   │   └── _error.js
 │   ├── types
 │   │   └── router.d.ts
 │   ├── web
@@ -82,6 +80,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── ExploreHeader.tsx
 │   │   ├── FeedViewer.tsx
 │   │   ├── LikeButton.tsx
+│   │   ├── PostActions.tsx
 │   │   ├── PostCard.tsx
 │   │   ├── ShareButton.tsx
 │   │   ├── Tags.tsx
@@ -157,9 +156,11 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── signin.styles.ts
 │   │   └── signup.styles.ts
 │   ├── feed
+│   │   ├── commentSheet.styles.ts
 │   │   ├── exploreFeed.styles.ts
 │   │   ├── exploreHeader.styles.ts
 │   │   ├── likeButton.styles.ts
+│   │   ├── postActions.styles.ts
 │   │   ├── postCard.styles.ts
 │   │   ├── shareButton.styles.ts
 │   │   ├── tags.styles.ts
