@@ -1,0 +1,14 @@
+if you want to fix it pls, first of all state what causes the problem, then state the code file path to be edited the old code to be replaced and then new code to replace it, the code to be deleted, and if a new code is to be added state exactly where it should be added that is the line before or after where it should be added. so i don't get confused.. and lastly dont add comments, add console.log so that i see what is going
+
+
+also let me know if there is a file to delete, or a new file to be created let me know the name of the file and the path to create/delete it, for new file provide the command to create the new file(s) and the full complete correct code
+
+
+also let me know what to do in supabase if necessary
+
+
+help me state the files to create/edit the file path to add them and the command to create these files also the complete corrected code for these files, or the extra code to add or to delete or to replace (state the old code to be replaced and then new code to replace it). and also let me know what to do to know if it is working
+
+
+
+return the complete corrected code leave styles for now, or if you must add it must be on a separate file; under the frontend-expo\styles hp@CYBERSPACE MINGW64 ~/Desktop/Software_Work/weup/frontend-expo (main) $ ls styles auth/ feed/ layout/ shadows.ts theme.ts colors.ts global.ts navigation/ spacing.ts typography.ts hp@CYBERSPACE MINGW64 ~/Desktop/Software_Work/weup/frontend-expo (main) $ ls styles auth/ feed/ layout/ shadows.ts theme.ts colors.ts global.ts navigation/ spacing.ts typography.ts hp@CYBERSPACE MINGW64 ~/Desktop/Software_Work/weup/frontend-expo (main) $ ls styles/feed exploreFeed.styles.ts topicChips.styles.ts exploreHeader.styles.ts

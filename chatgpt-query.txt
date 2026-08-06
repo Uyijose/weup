@@ -5,3 +5,8 @@ also let me know if there is a file to delete, or a new file to be created let m
 
 
 also let me know what to do in supabase if necessary
+
+
+help me state the files to created the file path to add them and the command to create these files also the complete corrected code for these files
+
+

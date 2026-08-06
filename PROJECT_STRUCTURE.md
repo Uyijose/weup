@@ -5,11 +5,9 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 ```
 ├── backend
 │   ├── src
-│   │   ├── controller
 │   │   ├── lib
 │   │   │   └── supabase.js
 │   │   ├── middleware
-│   │   │   ├── auth.middleware-old.js
 │   │   │   └── auth.middleware.js
 │   │   ├── routes
 │   │   │   ├── comments
@@ -31,16 +29,16 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── scripts
 │   │   │   ├── json
 │   │   │   │   ├── postsReport.json
+│   │   │   │   ├── user_conversations.json
 │   │   │   │   └── usersReport.json
-│   │   │   ├── chat_cyce-old.js
 │   │   │   ├── chat_cyce.js
-│   │   │   ├── chat_uyee-old.js
 │   │   │   ├── chat_uyee.js
 │   │   │   ├── generateLikes.js
 │   │   │   ├── generatePostsReport.js
 │   │   │   ├── generateSubscriptions.js
 │   │   │   ├── generateThumbnails.js
-│   │   │   └── generateUsersReport.js
+│   │   │   ├── generateUsersReport.js
+│   │   │   └── get_user_conversations.js
 │   │   ├── services
 │   │   │   ├── messaging
 │   │   │   │   ├── conversations.service.js
@@ -63,7 +61,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── admin_system_plan.md
 │   ├── ads_system.md
 │   ├── creator_system_plan.md
-│   └── WeUp_Ads_Frontend_Integration_Guide.md
+│   └── WhosUp_Ads_Frontend_Integration_Guide.md
 ├── frontend
 │   ├── components
 │   │   ├── ads
@@ -83,8 +81,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   ├── VideoTopAd_Exo_Cl-old.jsx
 │   │   │   └── VideoTopAd_Exo_Cl.jsx
 │   │   ├── detailsPage
-│   │   │   ├── DetailFeed.js
-│   │   │   └── VideoDetail.js
+│   │   │   └── DetailFeed.js
 │   │   ├── icon
 │   │   │   ├── Other.js
 │   │   │   └── Telegram.js
@@ -99,6 +96,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   ├── Auth.css
 │   │   │   ├── BecomeCreator.css
 │   │   │   ├── BecomeCreatorModal.css
+│   │   │   ├── Chat.css
 │   │   │   ├── commentModal.css
 │   │   │   ├── createVideo-new.css
 │   │   │   ├── createVideo.css
@@ -109,7 +107,8 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   ├── Header.css
 │   │   │   ├── left-side.css
 │   │   │   ├── Legal.css
-│   │   │   ├── right-side-prev.css
+│   │   │   ├── Messages.css
+│   │   │   ├── NewMessage.css
 │   │   │   ├── right-side.css
 │   │   │   ├── SearchPage.css
 │   │   │   ├── Subscribers.css
@@ -122,7 +121,6 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── BecomeCreatorModal.js
 │   │   ├── Btns.js
 │   │   ├── Comments.js
-│   │   ├── CreateVideo-new.js
 │   │   ├── CreateVideo.js
 │   │   ├── CustomPosts.js
 │   │   ├── Header.js
@@ -130,7 +128,6 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── Like.js
 │   │   ├── Links.js
 │   │   ├── ModalPortal.js
-│   │   ├── Post-old.js
 │   │   ├── Post.js
 │   │   ├── RightHandSide.js
 │   │   ├── SwipeUpHint.js
@@ -156,9 +153,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   ├── hello.js
 │   │   │   └── signup.js
 │   │   ├── auth
-│   │   │   ├── google-callback-old.js
 │   │   │   ├── google-callback.js
-│   │   │   ├── signin-old.js
 │   │   │   ├── signin.js
 │   │   │   └── signup.js
 │   │   ├── careers
@@ -179,10 +174,13 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   └── index.js
 │   │   ├── legal
 │   │   │   └── index.js
+│   │   ├── messages
+│   │   │   ├── [id].js
+│   │   │   ├── index.js
+│   │   │   └── new.js
 │   │   ├── newsroom
 │   │   │   └── index.js
 │   │   ├── posts
-│   │   │   ├── [id]-dev.js
 │   │   │   └── [id].js
 │   │   ├── profile
 │   │   │   └── edit.js
@@ -201,24 +199,12 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   │   │   └── videos.js
 │   │   │   └── [id].js
 │   │   ├── _app.js
-│   │   ├── ads.js
-│   │   ├── banner-ads.js
 │   │   ├── index.js
-│   │   ├── interstitial-ads.js
-│   │   ├── popup-ads.js
 │   │   └── posts.js
 │   ├── public
 │   │   ├── 9c574ee4280776f1932e3ae3ab8f4170.html
 │   │   ├── buuny-swipeup.png
 │   │   ├── favicon.ico
-│   │   ├── feed-inline-ads.jpg
-│   │   ├── feedinline-ads.html
-│   │   ├── interstitial-ads.html
-│   │   ├── native-banner-ads.html
-│   │   ├── popunder-ads-2.jpg
-│   │   ├── popunder-ads.html
-│   │   ├── popunder-ads.jpg
-│   │   ├── popup-ads.html
 │   │   ├── test.mp4
 │   │   ├── vercel.svg
 │   │   ├── video-ads.html
@@ -227,6 +213,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── authStore.js
 │   │   ├── commentsStore.js
 │   │   ├── likesStore.js
+│   │   ├── messagesStore.js
 │   │   ├── postsStore.js
 │   │   ├── reportsStore.js
 │   │   ├── topicsStore.js
@@ -240,6 +227,9 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── constants.js
 │   │   ├── getAuthToken.js
 │   │   ├── gtag.js
+│   │   ├── messagesApi.js
+│   │   ├── realtimeChat.js
+│   │   ├── safePopunder.js
 │   │   └── supabaseClient.js
 │   ├── .env-example.local
 │   ├── .eslintrc.json
@@ -248,6 +238,211 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── package.json
 │   ├── postcss.config.js
 │   └── tailwind.config.js
+├── frontend-expo
+│   ├── .expo
+│   │   ├── dev
+│   │   │   └── logs
+│   │   ├── static-tmp
+│   │   │   └── _error.js
+│   │   ├── types
+│   │   │   └── router.d.ts
+│   │   ├── web
+│   │   │   └── cache
+│   │   │       └── production
+│   │   │           └── images
+│   │   │               └── favicon
+│   │   │                   └── favicon-a4e030697a7571b3e95d31860e4da55d2f98e5e861e2b55e414f45a8556828ba-contain-transparent
+│   │   │                       └── favicon-48.png
+│   │   ├── devices.json
+│   │   └── README.md
+│   ├── app
+│   │   ├── (auth)
+│   │   │   ├── _layout.tsx
+│   │   │   ├── forgot-password.tsx
+│   │   │   ├── signin.tsx
+│   │   │   └── signup.tsx
+│   │   ├── (tabs)
+│   │   │   ├── _layout.tsx
+│   │   │   ├── index.tsx
+│   │   │   ├── posts.tsx
+│   │   │   ├── profile.tsx
+│   │   │   ├── subscriptions.tsx
+│   │   │   └── upload.tsx
+│   │   ├── chat
+│   │   │   ├── [id].tsx
+│   │   │   └── new.tsx
+│   │   ├── creator
+│   │   │   ├── [id].tsx
+│   │   │   ├── become-creator.tsx
+│   │   │   └── videos.tsx
+│   │   ├── legal
+│   │   │   ├── about.tsx
+│   │   │   ├── careers.tsx
+│   │   │   ├── contact.tsx
+│   │   │   ├── developers.tsx
+│   │   │   ├── help.tsx
+│   │   │   ├── newsroom.tsx
+│   │   │   └── safety.tsx
+│   │   ├── posts
+│   │   │   ├── [id].tsx
+│   │   │   └── index.tsx
+│   │   ├── profile
+│   │   │   └── edit.tsx
+│   │   ├── search
+│   │   │   └── index.tsx
+│   │   ├── user
+│   │   │   ├── [id].tsx
+│   │   │   └── videos.tsx
+│   │   ├── +not-found.tsx
+│   │   ├── _layout.tsx
+│   │   ├── index.tsx
+│   │   └── modal.tsx
+│   ├── components
+│   │   ├── auth
+│   │   │   ├── AuthFooter.tsx
+│   │   │   ├── AuthHeader.tsx
+│   │   │   ├── AuthInput.tsx
+│   │   │   ├── GoogleButton.tsx
+│   │   │   └── PasswordInput.tsx
+│   │   ├── common
+│   │   │   ├── Avatar.tsx
+│   │   │   ├── Button.tsx
+│   │   │   ├── EmptyState.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── Loader.tsx
+│   │   │   └── Modal.tsx
+│   │   ├── creator
+│   │   ├── feed
+│   │   │   ├── CommentSheet.tsx
+│   │   │   ├── ExploreFeed.tsx
+│   │   │   ├── ExploreHeader.tsx
+│   │   │   ├── FeedViewer.tsx
+│   │   │   ├── LikeButton.tsx
+│   │   │   ├── PostCard.tsx
+│   │   │   ├── ShareButton.tsx
+│   │   │   ├── Tags.tsx
+│   │   │   ├── TopicChips.tsx
+│   │   │   ├── UserInfo.tsx
+│   │   │   └── VideoPlayer.tsx
+│   │   ├── layout
+│   │   │   └── AppHeader.tsx
+│   │   ├── legal
+│   │   ├── messaging
+│   │   │   ├── ChatBubble.tsx
+│   │   │   ├── ChatInput.tsx
+│   │   │   ├── ConversationItem.tsx
+│   │   │   └── TypingIndicator.tsx
+│   │   ├── navigation
+│   │   │   └── TabIcon.tsx
+│   │   ├── profile
+│   │   │   ├── EditProfileForm.tsx
+│   │   │   ├── FollowButton.tsx
+│   │   │   ├── ProfileHeader.tsx
+│   │   │   └── UserPosts.tsx
+│   │   ├── search
+│   │   ├── skeleton
+│   │   └── upload
+│   │       ├── UploadProgress.tsx
+│   │       ├── VideoPicker.tsx
+│   │       └── VideoPreview.tsx
+│   ├── constants
+│   │   ├── config.ts
+│   │   ├── permissions.ts
+│   │   ├── routes.ts
+│   │   └── topics.ts
+│   ├── context
+│   │   ├── AuthProvider.tsx
+│   │   ├── SocketProvider.tsx
+│   │   └── ThemeProvider.tsx
+│   ├── hooks
+│   │   └── useSelectFile.ts
+│   ├── lib
+│   │   ├── api.ts
+│   │   ├── queryClient.ts
+│   │   ├── socket.ts
+│   │   ├── storage.ts
+│   │   └── supabase.ts
+│   ├── scripts
+│   │   └── reset-project.js
+│   ├── services
+│   │   ├── auth.service.ts
+│   │   ├── comments.service.ts
+│   │   ├── messaging.service.ts
+│   │   ├── posts.service.ts
+│   │   ├── upload.service.ts
+│   │   └── users.service.ts
+│   ├── stores
+│   │   ├── authStore.ts
+│   │   ├── commentsStore.ts
+│   │   ├── exploreStore.ts
+│   │   ├── likesStore.ts
+│   │   ├── messagesStore.ts
+│   │   ├── postsStore.ts
+│   │   ├── reportsStore.ts
+│   │   ├── topicsStore.ts
+│   │   ├── uploadVideoStore.ts
+│   │   ├── usersStore.ts
+│   │   └── watchedHistoryStore.ts
+│   ├── styles
+│   │   ├── auth
+│   │   │   ├── authFooter.styles.ts
+│   │   │   ├── authHeader.styles.ts
+│   │   │   ├── authInput.styles.ts
+│   │   │   ├── googleButton.styles.ts
+│   │   │   ├── passwordInput.styles.ts
+│   │   │   ├── signin.styles.ts
+│   │   │   └── signup.styles.ts
+│   │   ├── feed
+│   │   │   ├── exploreFeed.styles.ts
+│   │   │   ├── exploreHeader.styles.ts
+│   │   │   ├── likeButton.styles.ts
+│   │   │   ├── postCard.styles.ts
+│   │   │   ├── shareButton.styles.ts
+│   │   │   ├── tags.styles.ts
+│   │   │   ├── topicChips.styles.ts
+│   │   │   ├── userInfo.styles.ts
+│   │   │   └── videoPlayer.styles.ts
+│   │   ├── layout
+│   │   │   └── appHeader.styles.ts
+│   │   ├── navigation
+│   │   │   └── tabIcon.styles.ts
+│   │   ├── colors.ts
+│   │   ├── global.ts
+│   │   ├── shadows.ts
+│   │   ├── spacing.ts
+│   │   ├── theme.ts
+│   │   └── typography.ts
+│   ├── types
+│   │   ├── api.ts
+│   │   ├── auth.ts
+│   │   ├── message.ts
+│   │   ├── post.ts
+│   │   └── user.ts
+│   ├── utils
+│   │   ├── compressVideo.ts
+│   │   ├── constants.ts
+│   │   ├── getAuthToken.ts
+│   │   ├── gtag.ts
+│   │   ├── messagesApi.ts
+│   │   ├── realtimeChat.ts
+│   │   └── safePopunder.ts
+│   ├── .gitignore
+│   ├── AGENTS.md
+│   ├── app.json
+│   ├── chatgpt-query.txt
+│   ├── CLAUDE.md
+│   ├── expo-env.d.ts
+│   ├── extra_plan.md
+│   ├── frontend-expo-file-structure.md
+│   ├── LICENSE
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── PROJECT_STRUCTURE.md
+│   ├── project_tree_cleaner.py
+│   ├── README.md
+│   ├── test.md
+│   ├── tsconfig.json
+│   └── WeUp_Expo_Migration_Plan.md
 ├── migration
 │   ├── supabase
 │   │   ├── .temp
