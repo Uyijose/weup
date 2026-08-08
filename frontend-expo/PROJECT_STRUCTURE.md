@@ -66,6 +66,11 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── AuthInput.tsx
 │   │   ├── GoogleButton.tsx
 │   │   └── PasswordInput.tsx
+│   ├── comments
+│   │   ├── CommentActions.tsx
+│   │   ├── CommentInput.tsx
+│   │   ├── CommentItem.tsx
+│   │   └── CommentList.tsx
 │   ├── common
 │   │   ├── Avatar.tsx
 │   │   ├── Button.tsx
@@ -100,14 +105,18 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── profile
 │   │   ├── EditProfileForm.tsx
 │   │   ├── FollowButton.tsx
+│   │   ├── ProfileActions.tsx
 │   │   ├── ProfileHeader.tsx
-│   │   └── UserPosts.tsx
+│   │   ├── ProfileStats.tsx
+│   │   ├── UserPosts.tsx
+│   │   └── WatchedHistoryGrid.tsx
 │   ├── search
 │   ├── skeleton
 │   └── upload
 │       ├── UploadProgress.tsx
 │       ├── VideoPicker.tsx
 │       └── VideoPreview.tsx
+├── componentscomments
 ├── constants
 │   ├── config.ts
 │   ├── permissions.ts
@@ -155,6 +164,9 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── passwordInput.styles.ts
 │   │   ├── signin.styles.ts
 │   │   └── signup.styles.ts
+│   ├── comments
+│   │   ├── commentActions.styles.ts
+│   │   └── commentInput.styles.ts
 │   ├── feed
 │   │   ├── commentSheet.styles.ts
 │   │   ├── exploreFeed.styles.ts
@@ -172,6 +184,12 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   └── appHeader.styles.ts
 │   ├── navigation
 │   │   └── tabIcon.styles.ts
+│   ├── profile
+│   │   ├── profileActions.styles.ts
+│   │   ├── profileHeader.styles.ts
+│   │   ├── profileStats.styles.ts
+│   │   ├── userProfile.styles.ts
+│   │   └── watchedHistoryGrid.styles.ts
 │   ├── colors.ts
 │   ├── global.ts
 │   ├── shadows.ts
@@ -200,6 +218,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 ├── expo-env.d.ts
 ├── extra_plan.md
 ├── frontend-expo-file-structure.md
+├── future_plan.md
 ├── LICENSE
 ├── package-lock.json
 ├── package.json

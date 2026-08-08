@@ -1,172 +1,288 @@
 import { create } from "zustand";
-import { supabase } from "../utils/supabaseClient";
+import { supabase } from "../lib/supabase";
 
-export const useWatchedHistoryStore = create((set, get) => ({
-  watchedVideos: [],
-  loading: false,
+export type WatchedVideo = {
+  id: string;
+  video_url?: string | null;
+  caption?: string | null;
+  topic?: string | null;
+  user_id?: string | null;
+  thumbnail_url?: string | null;
+  created_at?: string | null;
+  parent_post_id?: string | null;
+  post_id?: string | null;
+  video_part_id?: string | null;
+  part_number?: number | null;
+  part?: number | null;
+};
 
-  fetchWatchedHistory: async (userId) => {
-    if (!userId) return;
-    set({ loading: true });
+type WatchedPost = {
+  id: string;
+  original_post_id?: string | null;
+  video_url?: string | null;
+  caption?: string | null;
+  topic?: string | null;
+  user_id?: string | null;
+  thumbnail_url?: string | null;
+  created_at?: string | null;
+  post_id?: string | null;
+  video_part_id?: string | null;
+  part_number?: number | null;
+  part?: number | null;
+};
 
-    const { data: views, error } = await supabase
-      .from("post_views")
-      .select(`
-        post_id,
-        video_part_id,
-        viewed_at,
-        posts:post_id (
-          id,
-          video_url,
-          caption,
-          topic,
-          user_id,
-          thumbnail_url,
-          created_at
-        ),
-        video_parts:video_part_id (
-          id,
-          video_url,
-          post_id,
-          part_number
-        )
-      `)
-      .eq("viewer_id", userId)
-      .order("viewed_at", { ascending: false });
+type WatchedHistoryState = {
+  watchedVideos: WatchedVideo[];
+  loading: boolean;
+  fetchWatchedHistory: (userId: string) => Promise<void>;
+  addView: (params: {
+    post: WatchedPost;
+    userId: string | null;
+  }) => Promise<void>;
+};
 
-    if (error) {
-      set({ loading: false });
-      return;
-    }
+type PostView = {
+  post_id: string | null;
+  video_part_id: string | null;
+  viewed_at: string;
+  posts:
+    | {
+        id: string;
+        video_url?: string | null;
+        caption?: string | null;
+        topic?: string | null;
+        user_id?: string | null;
+        thumbnail_url?: string | null;
+        created_at?: string | null;
+      }
+    | null;
+  video_parts:
+    | {
+        id: string;
+        video_url?: string | null;
+        post_id?: string | null;
+        part_number?: number | null;
+      }
+    | null;
+};
 
-    const map = new Map();
+export const useWatchedHistoryStore = create<WatchedHistoryState>(
+  (set, get) => ({
+    watchedVideos: [],
+    loading: false,
 
-    views.forEach(v => {
-    let key = null;
-    let video = null;
-
-    if (v.video_parts) {
-      key = "part_" + v.video_parts.id;
-      video = {
-        id: v.video_parts.id,
-        video_url: v.video_parts.video_url,
-        topic: "Part " + v.video_parts.part_number,
-        user_id: v.video_parts.post_id,
-        caption: v.posts?.caption || "",
-        thumbnail_url: v.posts?.thumbnail_url || "",
-        created_at: v.posts?.created_at || null,
-        parent_post_id: v.posts?.id || null
-      };
-    } else if (v.posts) {
-      key = "post_" + v.posts.id;
-
-      video = {
-        ...v.posts,
-        caption: v.posts.caption || "",
-        thumbnail_url: v.posts.thumbnail_url || "",
-        created_at: v.posts.created_at || null
-      };
-    }
-
-    if (!key || !video) return;
-
-    if (!map.has(key)) {
-        map.set(key, video);
-    }
-    });
-
-    const resolved = Array.from(map.values());
-    set({
-    watchedVideos: resolved,
-    loading: false
-    });
-  },
-
-  addView: async ({ post, userId }) => {
-    const postId = post.original_post_id ? null : post.id;
-    const videoPartId = post.original_post_id ? post.id : null;
-    const key = videoPartId ? "part_" + videoPartId : "post_" + post.id;
-
-    const alreadyViewed = get().watchedVideos.some(v =>
-      videoPartId ? v.id === videoPartId : v.id === post.id
-    );
-
-    if (alreadyViewed) {
-      console.log("SKIP view (already watched)", key);
-      return;
-    }
-
-    console.log("COUNTING view", key);
-
-    try {
+    fetchWatchedHistory: async (userId: string) => {
       if (!userId) {
-        let anonId = document.cookie.match(/(^| )anon_id=([^;]+)/)?.[2];
-        if (!anonId) {
-          anonId = crypto.randomUUID();
-          document.cookie = `anon_id=${anonId}; path=/; max-age=31536000`;
-          console.log("Created anon_id", anonId);
+        return;
+      }
+
+      set({ loading: true });
+
+      try {
+        const { data, error } = await supabase
+          .from("post_views")
+          .select(`
+            post_id,
+            video_part_id,
+            viewed_at,
+            posts:post_id (
+              id,
+              video_url,
+              caption,
+              topic,
+              user_id,
+              thumbnail_url,
+              created_at
+            ),
+            video_parts:video_part_id (
+              id,
+              video_url,
+              post_id,
+              part_number
+            )
+          `)
+          .eq("viewer_id", userId)
+          .order("viewed_at", { ascending: false });
+
+        if (error) {
+          console.log("[WATCHED] Failed to fetch history:", error);
+          set({ loading: false });
+          return;
         }
 
-        try {
-          const { data, error } = await supabase
-            .from("post_views")
-            .insert({
-              post_id: post.id,
-              video_part_id: videoPartId,
-              anon_id: anonId
-            })
-            .select();
+        const views = (data ?? []) as unknown as PostView[];
 
-          if (error) {
-            if (error.code === "23505") {
-              console.log("ANON DUPLICATE view ignored", key);
-              return;
-            }
-            if (error.code === "42501") {
-              console.log("ANON VIEW BLOCKED by RLS", key, error.message);
-              return;
-            }
-            console.log("ANON VIEW ERROR", error);
+        const map = new Map<string, WatchedVideo>();
+
+        views.forEach((view: PostView) => {
+          let key: string | null = null;
+          let video: WatchedVideo | null = null;
+
+          if (view.video_parts) {
+            key = `part_${view.video_parts.id}`;
+
+            video = {
+              id: view.video_parts.id,
+              video_url: view.video_parts.video_url ?? null,
+              topic:
+                view.video_parts.part_number != null
+                  ? `Part ${view.video_parts.part_number}`
+                  : null,
+              user_id: view.posts?.user_id ?? null,
+              caption: view.posts?.caption ?? "",
+              thumbnail_url: view.posts?.thumbnail_url ?? null,
+              created_at: view.posts?.created_at ?? null,
+              parent_post_id: view.posts?.id ?? null,
+              post_id: view.video_parts.post_id ?? null,
+              video_part_id: view.video_parts.id,
+              part_number: view.video_parts.part_number ?? null,
+              part: view.video_parts.part_number ?? null,
+            };
+          } else if (view.posts) {
+            key = `post_${view.posts.id}`;
+
+            video = {
+              id: view.posts.id,
+              video_url: view.posts.video_url ?? null,
+              caption: view.posts.caption ?? "",
+              topic: view.posts.topic ?? null,
+              user_id: view.posts.user_id ?? null,
+              thumbnail_url: view.posts.thumbnail_url ?? null,
+              created_at: view.posts.created_at ?? null,
+              post_id: view.posts.id,
+            };
+          }
+
+          if (!key || !video) {
             return;
           }
 
-          console.log("ANON VIEW SAVED", key, data);
-        } catch (err) {
-          console.log("ANON VIEW THROW ERROR", key, err.message || err);
-          return;
-        }
-      } else {
-        const { error } = await supabase.from("post_views").insert({
-          post_id: postId,
-          video_part_id: videoPartId,
-          viewer_id: userId
+          if (!map.has(key)) {
+            map.set(key, video);
+          }
         });
+
+        set({
+          watchedVideos: Array.from(map.values()),
+          loading: false,
+        });
+      } catch (error: unknown) {
+        console.log("[WATCHED] Unexpected error:", error);
+        set({
+          loading: false,
+        });
+      }
+    },
+
+    addView: async ({
+      post,
+      userId,
+    }: {
+      post: WatchedPost;
+      userId: string | null;
+    }) => {
+      if (!post?.id) {
+        return;
+      }
+
+      if (!userId) {
+        return;
+      }
+
+      const postId = post.original_post_id ? null : post.id;
+      const videoPartId = post.original_post_id ? post.id : null;
+
+      const key = videoPartId
+        ? `part_${videoPartId}`
+        : `post_${post.id}`;
+
+      const alreadyViewed = get().watchedVideos.some((video) =>
+        videoPartId
+          ? video.id === videoPartId
+          : video.id === post.id
+      );
+
+      if (alreadyViewed) {
+        console.log("[WATCHED] Skipping existing view:", key);
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from("post_views")
+          .insert({
+            post_id: postId,
+            video_part_id: videoPartId,
+            viewer_id: userId,
+          });
 
         if (error) {
           if (error.code === "23505") {
-            console.log("DUPLICATE view ignored", key);
+            console.log("[WATCHED] Duplicate view ignored:", key);
             return;
           }
-          throw error;
+
+          console.log(
+            "[WATCHED] Failed to save view:",
+            error.code,
+            error.message
+          );
+
+          return;
         }
 
         if (!post.original_post_id) {
-          await supabase.rpc("increment_post_views", {
-            p_post_id: post.id.toString(),
-            p_viewer_id: userId.toString(),
-            p_creator_id: post.user_id.toString()
-          });
+          const { error: rpcError } = await supabase.rpc(
+            "increment_post_views",
+            {
+              p_post_id: post.id.toString(),
+              p_viewer_id: userId.toString(),
+              p_creator_id: post.user_id?.toString() ?? "",
+            }
+          );
+
+          if (rpcError) {
+            console.log(
+              "[WATCHED] Failed to increment post views:",
+              rpcError.code,
+              rpcError.message
+            );
+          }
+        }
+
+        const watchedVideo: WatchedVideo = {
+          id: post.id,
+          video_url: post.video_url ?? null,
+          caption: post.caption ?? "",
+          topic: post.topic ?? null,
+          user_id: post.user_id ?? null,
+          thumbnail_url: post.thumbnail_url ?? null,
+          created_at: post.created_at ?? null,
+          post_id: post.post_id ?? post.id,
+          video_part_id: post.video_part_id ?? null,
+          part_number: post.part_number ?? null,
+          part: post.part ?? null,
+          parent_post_id: post.original_post_id ?? null,
+        };
+
+        set((state) => ({
+          watchedVideos: [
+            ...state.watchedVideos,
+            watchedVideo,
+          ],
+        }));
+
+        console.log("[WATCHED] View saved:", key);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.log(
+            "[WATCHED] View error:",
+            error.message
+          );
+        } else {
+          console.log("[WATCHED] View error:", error);
         }
       }
-
-      console.log("VIEW SAVED", key);
-
-      set(state => ({
-        watchedVideos: [...state.watchedVideos, post]
-      }));
-    } catch (err) {
-      console.log("VIEW ERROR", err?.code || err?.message);
-    }
-  }
-
-}));
+    },
+  })
+);

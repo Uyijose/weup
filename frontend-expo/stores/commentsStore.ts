@@ -1,10 +1,29 @@
 import { create } from "zustand";
-import { getAuthToken } from "../utils/getAuthToken.js";
+import { getAuthToken } from "../utils/getAuthToken";
+import { api } from "../lib/api";
 
-export const useCommentsStore = create((set, get) => ({
+type CommentsStore = {
+  commentsMap: Record<string, any[]>;
+
+  fetchComments: (
+    postId: string,
+    videoPartId?: string
+  ) => Promise<any[]>;
+
+  addComment: (
+    keyId: string,
+    comment: any
+  ) => void;
+};
+
+export const useCommentsStore =
+  create<CommentsStore>((set) => ({
   commentsMap: {},
 
-  fetchComments: async (postId, videoPartId) => {
+  fetchComments: async (
+    postId: string,
+    videoPartId?: string
+  ) => {
     const token = await getAuthToken();
 
     const keyId = videoPartId ?? postId;
@@ -18,35 +37,43 @@ export const useCommentsStore = create((set, get) => ({
       value
     });
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/comments?${column}=${value}`,
-      {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-      }
-    );
-
-    const data = await res.json();
-
-    console.log("[COMMENTS RESPONSE]", {
-      keyId,
-      ok: res.ok,
-      count: Array.isArray(data) ? data.length : 0
-    });
-
-    set((state) => ({
-      commentsMap: {
-        ...state.commentsMap,
-        [keyId]: Array.isArray(data) ? data : [],
+    const { data } = await api.get(
+    `/api/comments?${column}=${value}`,
+    {
+      headers: {
+        Authorization: token
+          ? `Bearer ${token}`
+          : "",
       },
-    }));
+    }
+  );
 
-    return Array.isArray(data) ? data : [];
+  console.log("[COMMENTS RESPONSE]", {
+    keyId,
+    count: Array.isArray(data)
+      ? data.length
+      : 0,
+  });
+
+  set((state: CommentsStore) => ({
+    commentsMap: {
+      ...state.commentsMap,
+      [keyId]: Array.isArray(data)
+        ? data
+        : [],
+    },
+  }));
+
+  return Array.isArray(data)
+    ? data
+    : [];
   },
 
-  addComment: (keyId, comment) =>
-  set((state) => {
+  addComment: (
+    keyId: string,
+    comment: any
+  ) =>
+  set((state: CommentsStore) => {
     const existing = state.commentsMap[keyId];
 
     console.log("[COMMENT ADD]", {

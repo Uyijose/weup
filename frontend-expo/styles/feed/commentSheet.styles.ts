@@ -14,29 +14,7 @@ export const commentSheetStyles =
       marginBottom: 20,
     },
 
-    list: {
+    content: {
       flex: 1,
-    },
-
-    emptyText: {
-      fontSize: 15,
-      color: "#666666",
-      marginBottom: 8,
-    },
-
-    postId: {
-      fontSize: 12,
-      color: "#999999",
-    },
-
-    inputArea: {
-      borderTopWidth: 1,
-      borderTopColor: "#EEEEEE",
-      paddingTop: 16,
-    },
-
-    placeholder: {
-      color: "#999999",
-      fontSize: 14,
     },
   });

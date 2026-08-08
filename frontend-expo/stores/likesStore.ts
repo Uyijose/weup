@@ -1,81 +1,130 @@
 import { create } from "zustand";
-import { getAuthToken } from "../utils/getAuthToken.js";
+import { api } from "../lib/api";
+import { getAuthToken } from "../utils/getAuthToken";
+import { usePostsStore } from "./postsStore";
 
-export const useLikesStore = create((set, get) => ({
-  likesMap: {},
+type LikeState = {
+  hasLiked: boolean;
+  likeId: string | null;
+};
 
-  fetchLikeState: async (id, isVideoPart) => {
+type LikesStore = {
+  likesMap: Record<string, LikeState>;
 
-    const token = await getAuthToken();
-    if (!token) {
-      return;
-    }
+  fetchLikeState: (
+    id: string,
+    isVideoPart: boolean
+  ) => Promise<void>;
 
-    const column = isVideoPart ? "video_part_id" : "post_id";
+  toggleLike: (
+    id: string,
+    isVideoPart: boolean
+  ) => Promise<any>;
+};
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/likes/state?${column}=${id}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
+export const useLikesStore =
+  create<LikesStore>((set, get) => ({
+    likesMap: {},
+
+    fetchLikeState: async (
+      id: string,
+      isVideoPart: boolean
+    ) => {
+      const token = await getAuthToken();
+
+      if (!token) {
+        return;
       }
-    );
 
-    const data = await res.json();
-    set(state => ({
-      likesMap: {
-        ...state.likesMap,
-        [id]: {
-          hasLiked: data.hasLiked,
-          likeId: data.likeId,
+      const column = isVideoPart
+        ? "video_part_id"
+        : "post_id";
+
+      const { data } = await api.get(
+        `/api/likes/state?${column}=${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      }
-    }));
-  },
+      );
 
-  toggleLike: async (id, isVideoPart) => {
-    const token = await getAuthToken();
-    if (!token) {
-      return null;
-    }
-
-    const current = get().likesMap[id];
-    const hasLiked = current?.hasLiked;
-
-    const postsStore = require("./postsStore.js").usePostsStore.getState();
-    const currentPost = postsStore.postsMap[id];
-    const currentCount = currentPost?.likes_count ?? 0;
-
-    const newCount = hasLiked ? currentCount - 1 : currentCount + 1;
-    postsStore.updateLikesCount(id, newCount);
-
-    set(state => ({
-      likesMap: {
-        ...state.likesMap,
-        [id]: {
-          ...state.likesMap[id],
-          hasLiked: !hasLiked,
-        }
-      }
-    }));
-
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/likes/toggle`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      set((state) => ({
+        likesMap: {
+          ...state.likesMap,
+          [id]: {
+            hasLiked: data.hasLiked,
+            likeId: data.likeId,
+          },
         },
-        body: JSON.stringify({
-          post_id: isVideoPart ? null : id,
-          video_part_id: isVideoPart ? id : null,
-        }),
+      }));
+    },
+
+    toggleLike: async (
+      id: string,
+      isVideoPart: boolean
+    ) => {
+      const token = await getAuthToken();
+
+      if (!token) {
+        return null;
       }
-    );
 
-    const data = await res.json();
-    await get().fetchLikeState(id, isVideoPart);
+      const current =
+        get().likesMap[id];
 
-    return data;
-  }
-}));
+      const hasLiked =
+        current?.hasLiked ?? false;
+
+      const postsStore =
+        usePostsStore.getState();
+
+      const currentPost =
+        postsStore.currentPost;
+
+      const currentCount =
+        currentPost?.likes_count ?? 0;
+
+      const newCount = hasLiked
+        ? Math.max(0, currentCount - 1)
+        : currentCount + 1;
+
+      postsStore.updateLikes(
+        newCount
+      );
+
+      set((state) => ({
+        likesMap: {
+          ...state.likesMap,
+          [id]: {
+            ...state.likesMap[id],
+            hasLiked: !hasLiked,
+          },
+        },
+      }));
+
+      const { data } = await api.post(
+        "/api/likes/toggle",
+        {
+          post_id: isVideoPart
+            ? null
+            : id,
+          video_part_id: isVideoPart
+            ? id
+            : null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      await get().fetchLikeState(
+        id,
+        isVideoPart
+      );
+
+      return data;
+    },
+  }));

@@ -1,32 +1,51 @@
-import { SafeAreaView, Text, View } from "react-native";
+import React, { useEffect } from "react";
 
-import AppHeader from "../../components/layout/AppHeader";
+import { ActivityIndicator, SafeAreaView } from "react-native";
+
+import { router } from "expo-router";
+
+import { useAuthStore } from "../../stores/authStore";
 
 export default function ProfileTab() {
+  const user = useAuthStore((state) => state.user);
+  const loading = useAuthStore((state) => state.loading);
+  const hydrateAuth = useAuthStore((state) => state.hydrateAuth);
+
+  useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (!user?.id) {
+      router.replace("/(auth)/signin");
+      return;
+    }
+
+    router.replace({
+      pathname: "/user/[id]",
+      params: {
+        id: String(user.id),
+      },
+    });
+  }, [loading, user?.id]);
+
   return (
     <SafeAreaView
       style={{
         flex: 1,
         backgroundColor: "#000",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
-      <AppHeader />
-
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Text
-          style={{
-            color: "#FFFFFF",
-          }}
-        >
-          Profile
-        </Text>
-      </View>
+      <ActivityIndicator
+        size="large"
+        color="#6A00F4"
+      />
     </SafeAreaView>
   );
 }

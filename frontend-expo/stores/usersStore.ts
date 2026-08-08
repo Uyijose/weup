@@ -1,33 +1,54 @@
 import { create } from "zustand";
-import { supabase } from "../utils/supabaseClient";
+import { supabase } from "../lib/supabase";
 
-export const useUsersStore = create((set, get) => ({
+type User = Record<string, any>;
+
+type UsersState = {
+  usersMap: Record<string, User>;
+  loading: boolean;
+  fetchUserById: (id: string, force?: boolean) => Promise<void>;
+};
+
+export const useUsersStore = create<UsersState>((set, get) => ({
   usersMap: {},
   loading: false,
 
-  fetchUserById: async (id) => {
-    if (get().usersMap[id]) {
+  fetchUserById: async (id: string, force = false) => {
+    if (!id) {
       return;
     }
+
+    if (!force && get().usersMap[id]) {
+      return;
+    }
+
     set({ loading: true });
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-    if (error || !data) {
+      if (error || !data) {
+        console.log("[USERS] Failed to fetch user:", error);
+
+        set({ loading: false });
+        return;
+      }
+
+      set((state) => ({
+        usersMap: {
+          ...state.usersMap,
+          [id]: data as User,
+        },
+        loading: false,
+      }));
+    } catch (error: unknown) {
+      console.log("[USERS] Unexpected error:", error);
+
       set({ loading: false });
-      return;
     }
-
-    set(state => ({
-      usersMap: {
-        ...state.usersMap,
-        [id]: data
-      },
-      loading: false
-    }));
-  }
+  },
 }));

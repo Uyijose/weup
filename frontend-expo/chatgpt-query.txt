@@ -7,7 +7,7 @@ also let me know if there is a file to delete, or a new file to be created let m
 also let me know what to do in supabase if necessary
 
 
-help me state the files to create/edit the file path to add them and the command to create these files also the complete corrected code for these files, or the extra code to add or to delete or to replace (state the old code to be replaced and then new code to replace it). and also let me know what to do to know if it is working
+help me state the files to create/edit the file path to add them and the command to create (i am using git bash) these files also the complete corrected code for these files, or the extra code to add or to delete or to replace (state the old code to be replaced and then new code to replace it). and also let me know what to do to know if it is working
 
 
 
