@@ -79,6 +79,12 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── Loader.tsx
 │   │   └── Modal.tsx
 │   ├── creator
+│   │   ├── BecomeCreatorModal.tsx
+│   │   ├── CreatorDescription.tsx
+│   │   ├── CreatorHeader.tsx
+│   │   ├── CreatorStats.tsx
+│   │   ├── CreatorVideoCard.tsx
+│   │   └── CreatorVideoGrid.tsx
 │   ├── feed
 │   │   ├── CommentSheet.tsx
 │   │   ├── ExploreFeed.tsx
@@ -103,20 +109,28 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── navigation
 │   │   └── TabIcon.tsx
 │   ├── profile
+│   │   ├── AvatarPicker.tsx
+│   │   ├── CreatorSection.tsx
 │   │   ├── EditProfileForm.tsx
 │   │   ├── FollowButton.tsx
+│   │   ├── HistoryVideoCard.tsx
+│   │   ├── PasswordSection.tsx
 │   │   ├── ProfileActions.tsx
 │   │   ├── ProfileHeader.tsx
 │   │   ├── ProfileStats.tsx
 │   │   ├── UserPosts.tsx
 │   │   └── WatchedHistoryGrid.tsx
 │   ├── search
+│   │   ├── SearchAccountCard.tsx
+│   │   ├── SearchAccountsSection.tsx
+│   │   ├── SearchInput.tsx
+│   │   ├── SearchPostCard.tsx
+│   │   └── SearchPostsSection.tsx
 │   ├── skeleton
 │   └── upload
 │       ├── UploadProgress.tsx
 │       ├── VideoPicker.tsx
 │       └── VideoPreview.tsx
-├── componentscomments
 ├── constants
 │   ├── config.ts
 │   ├── permissions.ts
@@ -141,6 +155,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── comments.service.ts
 │   ├── messaging.service.ts
 │   ├── posts.service.ts
+│   ├── search.service.ts
 │   ├── upload.service.ts
 │   └── users.service.ts
 ├── stores
@@ -167,6 +182,15 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── comments
 │   │   ├── commentActions.styles.ts
 │   │   └── commentInput.styles.ts
+│   ├── creator
+│   │   ├── becomeCreator.styles.ts
+│   │   ├── becomeCreatorModal.styles.ts
+│   │   ├── creatorDescription.styles.ts
+│   │   ├── creatorHeader.styles.ts
+│   │   ├── creatorProfile.styles.ts
+│   │   ├── creatorStats.styles.ts
+│   │   ├── creatorVideoCard.styles.ts
+│   │   └── creatorVideoGrid.styles.ts
 │   ├── feed
 │   │   ├── commentSheet.styles.ts
 │   │   ├── exploreFeed.styles.ts
@@ -185,11 +209,19 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── navigation
 │   │   └── tabIcon.styles.ts
 │   ├── profile
+│   │   ├── historyVideoCard.styles.ts
 │   │   ├── profileActions.styles.ts
 │   │   ├── profileHeader.styles.ts
 │   │   ├── profileStats.styles.ts
 │   │   ├── userProfile.styles.ts
 │   │   └── watchedHistoryGrid.styles.ts
+│   ├── search
+│   │   ├── search.styles.ts
+│   │   ├── searchAccountCard.styles.ts
+│   │   ├── searchAccountsSection.styles.ts
+│   │   ├── searchInput.styles.ts
+│   │   ├── searchPostCard.styles.ts
+│   │   └── searchPostsSection.styles.ts
 │   ├── colors.ts
 │   ├── global.ts
 │   ├── shadows.ts

@@ -99,4 +99,22 @@ export const watchedHistoryGridStyles =
       fontSize: 14,
       fontWeight: "700",
     },
+
+    viewAllButton: {
+      marginHorizontal: 20,
+      marginTop: 2,
+      marginBottom: 24,
+      paddingVertical: 13,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "#6A00F4",
+    },
+
+    viewAllText: {
+      color: "#6A00F4",
+      fontSize: 14,
+      fontWeight: "700",
+    },
   });

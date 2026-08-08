@@ -333,6 +333,14 @@ export default function UserProfileScreen() {
           <WatchedHistoryGrid
             videos={pageVideos}
             isOwner={isOwner}
+            onViewAll={() => {
+                router.push({
+                pathname: "/user/videos",
+                params: {
+                    id: profileUser.id,
+                },
+                });
+            }}
           />
         )}
 

@@ -37,7 +37,7 @@ export default function ProfileActions({
 
   const createConversation =
     useMessagesStore(
-      (state: any) => state.createConversation
+      (state) => state.createConversation
     );
 
   const handleEditProfile = () => {
@@ -45,7 +45,7 @@ export default function ProfileActions({
   };
 
   const handleAdminPanel = () => {
-    // router.push("/admin/dashboard");
+    return;
   };
 
   const handleCreatorPage = () => {
@@ -53,9 +53,12 @@ export default function ProfileActions({
       return;
     }
 
-    router.push(
-      `/creator/${profileUser.creator_username}`
-    );
+    router.push({
+      pathname: "/creator/[id]",
+      params: {
+        id: profileUser.creator_username,
+      },
+    });
   };
 
   const handleSubscriptions = () => {
@@ -80,15 +83,22 @@ export default function ProfileActions({
     try {
       setMessageLoading(true);
 
-      const response =
-        await createConversation(
-          [authUser.id, profileUser.id],
-          false,
-          null
+      const response = await createConversation(
+        [authUser.id, profileUser.id],
+        false,
+        null
+      );
+
+      if (response.error) {
+        Alert.alert(
+          "Unable to start conversation",
+          response.error
         );
+        return;
+      }
 
       const conversationId =
-        response?.conversation?.id;
+        response.conversation?.id;
 
       if (!conversationId) {
         Alert.alert(
@@ -98,7 +108,12 @@ export default function ProfileActions({
         return;
       }
 
-      router.push(`/chat/${conversationId}`);
+      router.push({
+        pathname: "/chat/[id]",
+        params: {
+          id: conversationId,
+        },
+      });
     } catch (error) {
       console.log(
         "[PROFILE MESSAGE ERROR]",
@@ -124,19 +139,25 @@ export default function ProfileActions({
             onPress={handleEditProfile}
           >
             <Text
-              style={profileActionsStyles.primaryButtonText}
+              style={
+                profileActionsStyles.primaryButtonText
+              }
             >
               Edit Profile
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={profileActionsStyles.secondaryButton}
+            style={
+              profileActionsStyles.secondaryButton
+            }
             activeOpacity={0.8}
             onPress={handleSubscriptions}
           >
             <Text
-              style={profileActionsStyles.secondaryButtonText}
+              style={
+                profileActionsStyles.secondaryButtonText
+              }
             >
               Subscriptions
             </Text>
@@ -151,31 +172,33 @@ export default function ProfileActions({
           onPress={handleAdminPanel}
         >
           <Text
-            style={profileActionsStyles.adminButtonText}
+            style={
+              profileActionsStyles.adminButtonText
+            }
           >
             Admin Panel
           </Text>
         </TouchableOpacity>
       )}
 
-      {authUser && (
-        <TouchableOpacity
-          style={profileActionsStyles.secondaryButton}
-          activeOpacity={0.8}
-          onPress={handleMessages}
-          disabled={messageLoading}
+      <TouchableOpacity
+        style={profileActionsStyles.secondaryButton}
+        activeOpacity={0.8}
+        onPress={handleMessages}
+        disabled={messageLoading}
+      >
+        <Text
+          style={
+            profileActionsStyles.secondaryButtonText
+          }
         >
-          <Text
-            style={profileActionsStyles.secondaryButtonText}
-          >
-            {messageLoading
-              ? "Opening..."
-              : isOwner
-                ? "Messages"
-                : "Message"}
-          </Text>
-        </TouchableOpacity>
-      )}
+          {messageLoading
+            ? "Opening..."
+            : isOwner
+              ? "Messages"
+              : "Message"}
+        </Text>
+      </TouchableOpacity>
 
       {profileUser.is_creator &&
         profileUser.creator_username && (
@@ -185,7 +208,9 @@ export default function ProfileActions({
             onPress={handleCreatorPage}
           >
             <Text
-              style={profileActionsStyles.creatorButtonText}
+              style={
+                profileActionsStyles.creatorButtonText
+              }
             >
               Creator Page
             </Text>

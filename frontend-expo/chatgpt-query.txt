@@ -11,4 +11,6 @@ help me state the files to create/edit the file path to add them and the command
 
 
 
-return the complete corrected code leave styles for now, or if you must add it must be on a separate file; under the frontend-expo\styles hp@CYBERSPACE MINGW64 ~/Desktop/Software_Work/weup/frontend-expo (main) $ ls styles auth/ feed/ layout/ shadows.ts theme.ts colors.ts global.ts navigation/ spacing.ts typography.ts hp@CYBERSPACE MINGW64 ~/Desktop/Software_Work/weup/frontend-expo (main) $ ls styles auth/ feed/ layout/ shadows.ts theme.ts colors.ts global.ts navigation/ spacing.ts typography.ts hp@CYBERSPACE MINGW64 ~/Desktop/Software_Work/weup/frontend-expo (main) $ ls styles/feed exploreFeed.styles.ts topicChips.styles.ts exploreHeader.styles.ts
+http://localhost:8081/creator/Tester
+
+http://localhost:8081/creator/become-creator

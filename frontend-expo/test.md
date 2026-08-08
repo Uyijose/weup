@@ -1,783 +1,744 @@
-alright lets move to the next; 
+i clikced on the uploads tab and it is showing just uploads on the screen; 
 
-
-
-# Phase 5.4.3 — Messaging Integration
-
-Reuse the existing `messagesStore`.
-
----
-
-## Responsibilities
-
-- Create conversation
-- Navigate to chat
-- Open existing conversation
-- Redirect unauthenticated users to login
-
----
-
-## Success Criteria
-
-The Message button behaves exactly like the web version.
-
----
-
-# Phase 5.4.4 — Watched History
-
-## Responsibilities
-
-Load watched history and display:
-
-```text
-Video Thumbnail
-
-Caption
-
-Play
-
-Open Post
-```
-
----
-
-## Features
-
-- Empty state
-- Pagination
-- View All
-
----
-
-## Files
-
-```text
-components/profile/WatchedHistoryGrid.tsx
-components/profile/HistoryVideoCard.tsx
-```
-
----
-
-## Success Criteria
-
-Watched history behaves exactly like the web frontend.
-
----
-
-
-current file structure
-
-# 📁 Project Structure
-
-This file is auto-generated. Unnecessary folders (node_modules, build, test_run, etc.) are excluded.
-
-```
-├── .expo
-│   ├── dev
-│   │   └── logs
-│   ├── types
-│   │   └── router.d.ts
-│   ├── web
-│   │   └── cache
-│   │       └── production
-│   │           └── images
-│   │               └── favicon
-│   │                   └── favicon-a4e030697a7571b3e95d31860e4da55d2f98e5e861e2b55e414f45a8556828ba-contain-transparent
-│   │                       └── favicon-48.png
-│   ├── devices.json
-│   └── README.md
-├── app
-│   ├── (auth)
-│   │   ├── _layout.tsx
-│   │   ├── forgot-password.tsx
-│   │   ├── signin.tsx
-│   │   └── signup.tsx
-│   ├── (tabs)
-│   │   ├── _layout.tsx
-│   │   ├── index.tsx
-│   │   ├── posts.tsx
-│   │   ├── profile.tsx
-│   │   ├── subscriptions.tsx
-│   │   └── upload.tsx
-│   ├── chat
-│   │   ├── [id].tsx
-│   │   └── new.tsx
-│   ├── creator
-│   │   ├── [id].tsx
-│   │   ├── become-creator.tsx
-│   │   └── videos.tsx
-│   ├── legal
-│   │   ├── about.tsx
-│   │   ├── careers.tsx
-│   │   ├── contact.tsx
-│   │   ├── developers.tsx
-│   │   ├── help.tsx
-│   │   ├── newsroom.tsx
-│   │   └── safety.tsx
-│   ├── posts
-│   │   ├── [id].tsx
-│   │   └── index.tsx
-│   ├── profile
-│   │   └── edit.tsx
-│   ├── search
-│   │   └── index.tsx
-│   ├── user
-│   │   ├── [id].tsx
-│   │   └── videos.tsx
-│   ├── +not-found.tsx
-│   ├── _layout.tsx
-│   ├── index.tsx
-│   └── modal.tsx
-├── components
-│   ├── auth
-│   │   ├── AuthFooter.tsx
-│   │   ├── AuthHeader.tsx
-│   │   ├── AuthInput.tsx
-│   │   ├── GoogleButton.tsx
-│   │   └── PasswordInput.tsx
-│   ├── comments
-│   │   ├── CommentActions.tsx
-│   │   ├── CommentInput.tsx
-│   │   ├── CommentItem.tsx
-│   │   └── CommentList.tsx
-│   ├── common
-│   │   ├── Avatar.tsx
-│   │   ├── Button.tsx
-│   │   ├── EmptyState.tsx
-│   │   ├── Header.tsx
-│   │   ├── Loader.tsx
-│   │   └── Modal.tsx
-│   ├── creator
-│   ├── feed
-│   │   ├── CommentSheet.tsx
-│   │   ├── ExploreFeed.tsx
-│   │   ├── ExploreHeader.tsx
-│   │   ├── FeedViewer.tsx
-│   │   ├── LikeButton.tsx
-│   │   ├── PostActions.tsx
-│   │   ├── PostCard.tsx
-│   │   ├── ShareButton.tsx
-│   │   ├── Tags.tsx
-│   │   ├── TopicChips.tsx
-│   │   ├── UserInfo.tsx
-│   │   └── VideoPlayer.tsx
-│   ├── layout
-│   │   └── AppHeader.tsx
-│   ├── legal
-│   ├── messaging
-│   │   ├── ChatBubble.tsx
-│   │   ├── ChatInput.tsx
-│   │   ├── ConversationItem.tsx
-│   │   └── TypingIndicator.tsx
-│   ├── navigation
-│   │   └── TabIcon.tsx
-│   ├── profile
-│   │   ├── EditProfileForm.tsx
-│   │   ├── FollowButton.tsx
-│   │   ├── ProfileActions.tsx
-│   │   ├── ProfileHeader.tsx
-│   │   ├── ProfileStats.tsx
-│   │   ├── UserPosts.tsx
-│   │   └── WatchedHistoryGrid.tsx
-│   ├── search
-│   ├── skeleton
-│   └── upload
-│       ├── UploadProgress.tsx
-│       ├── VideoPicker.tsx
-│       └── VideoPreview.tsx
-├── componentscomments
-├── constants
-│   ├── config.ts
-│   ├── permissions.ts
-│   ├── routes.ts
-│   └── topics.ts
-├── context
-│   ├── AuthProvider.tsx
-│   ├── SocketProvider.tsx
-│   └── ThemeProvider.tsx
-├── hooks
-│   └── useSelectFile.ts
-├── lib
-│   ├── api.ts
-│   ├── queryClient.ts
-│   ├── socket.ts
-│   ├── storage.ts
-│   └── supabase.ts
-├── scripts
-│   └── reset-project.js
-├── services
-│   ├── auth.service.ts
-│   ├── comments.service.ts
-│   ├── messaging.service.ts
-│   ├── posts.service.ts
-│   ├── upload.service.ts
-│   └── users.service.ts
-├── stores
-│   ├── authStore.ts
-│   ├── commentsStore.ts
-│   ├── exploreStore.ts
-│   ├── likesStore.ts
-│   ├── messagesStore.ts
-│   ├── postsStore.ts
-│   ├── reportsStore.ts
-│   ├── topicsStore.ts
-│   ├── uploadVideoStore.ts
-│   ├── usersStore.ts
-│   └── watchedHistoryStore.ts
-├── styles
-│   ├── auth
-│   │   ├── authFooter.styles.ts
-│   │   ├── authHeader.styles.ts
-│   │   ├── authInput.styles.ts
-│   │   ├── googleButton.styles.ts
-│   │   ├── passwordInput.styles.ts
-│   │   ├── signin.styles.ts
-│   │   └── signup.styles.ts
-│   ├── comments
-│   │   ├── commentActions.styles.ts
-│   │   └── commentInput.styles.ts
-│   ├── feed
-│   │   ├── commentSheet.styles.ts
-│   │   ├── exploreFeed.styles.ts
-│   │   ├── exploreHeader.styles.ts
-│   │   ├── likeButton.styles.ts
-│   │   ├── postActions.styles.ts
-│   │   ├── postCard.styles.ts
-│   │   ├── shareButton.styles.ts
-│   │   ├── tags.styles.ts
-│   │   ├── topicChips.styles.ts
-│   │   ├── userInfo.styles.ts
-│   │   ├── videoControls.styles.ts
-│   │   └── videoPlayer.styles.ts
-│   ├── layout
-│   │   └── appHeader.styles.ts
-│   ├── navigation
-│   │   └── tabIcon.styles.ts
-│   ├── profile
-│   │   ├── profileActions.styles.ts
-│   │   ├── profileHeader.styles.ts
-│   │   ├── profileStats.styles.ts
-│   │   ├── userProfile.styles.ts
-│   │   └── watchedHistoryGrid.styles.ts
-│   ├── colors.ts
-│   ├── global.ts
-│   ├── shadows.ts
-│   ├── spacing.ts
-│   ├── theme.ts
-│   └── typography.ts
-├── types
-│   ├── api.ts
-│   ├── auth.ts
-│   ├── message.ts
-│   ├── post.ts
-│   └── user.ts
-├── utils
-│   ├── compressVideo.ts
-│   ├── constants.ts
-│   ├── getAuthToken.ts
-│   ├── gtag.ts
-│   ├── messagesApi.ts
-│   ├── realtimeChat.ts
-│   └── safePopunder.ts
-├── .gitignore
-├── AGENTS.md
-├── app.json
-├── chatgpt-query.txt
-├── CLAUDE.md
-├── expo-env.d.ts
-├── extra_plan.md
-├── frontend-expo-file-structure.md
-├── future_plan.md
-├── LICENSE
-├── package-lock.json
-├── package.json
-├── PROJECT_STRUCTURE.md
-├── project_tree_cleaner.py
-├── README.md
-├── test.md
-├── tsconfig.json
-└── WeUp_Expo_Migration_Plan.md
-```
-
-
-frontend-expo\stores\messagesStore.ts
-import { create } from "zustand";
-import { supabase } from "../lib/supabase";
+frontend-expo\app\(tabs)\upload.tsx:
+import { useState } from "react";
 import {
-  fetchConversations,
-  fetchMessages,
-  sendMessage as sendMessageApi,
-} from "../utils/messagesApi";
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
-type ConversationMember = {
-  id: string;
-  username?: string | null;
-  avatar_url?: string | null;
+import AppHeader from "../../components/layout/AppHeader";
+import VideoPicker from "../../components/upload/VideoPicker";
+import { SelectedVideo } from "../../hooks/useSelectFile";
+import { uploadStyles } from "../../styles/upload/upload.styles";
+
+export default function UploadTab() {
+  const [selectedVideo, setSelectedVideo] =
+    useState<SelectedVideo | null>(null);
+
+  const handleVideoSelected = (video: SelectedVideo) => {
+    console.log("[UPLOAD SCREEN] Video received:", video);
+
+    setSelectedVideo(video);
+
+    Alert.alert(
+      "Video Selected",
+      video.fileName
+        ? `${video.fileName} has been selected.`
+        : "Video has been selected."
+    );
+  };
+
+  return (
+    <SafeAreaView style={uploadStyles.safeArea}>
+      <View style={uploadStyles.container}>
+        <AppHeader />
+
+        <ScrollView
+          contentContainerStyle={uploadStyles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={uploadStyles.title}>
+            Upload Video
+          </Text>
+
+          <Text style={uploadStyles.subtitle}>
+            Select a video from your device to get started.
+          </Text>
+
+          <View style={uploadStyles.pickerContainer}>
+            <VideoPicker
+              onVideoSelected={handleVideoSelected}
+            />
+          </View>
+
+          {selectedVideo && (
+            <View>
+              <Text style={uploadStyles.selectedVideoText}>
+                Selected video URI:
+              </Text>
+
+              <Text style={uploadStyles.selectedVideoText}>
+                {selectedVideo.uri}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+frontend-expo\hooks\useSelectFile.ts:
+import { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+
+export type SelectedVideo = {
+  uri: string;
+  fileName: string | null;
+  mimeType: string | null;
+  fileSize: number | null;
+  duration: number | null;
+  width: number | null;
+  height: number | null;
 };
 
-export type Conversation = {
-  id: string;
-  title?: string | null;
-  is_group?: boolean;
-  members?: ConversationMember[];
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: unknown;
-};
+const useSelectFile = () => {
+  const [selectedFile, setSelectedFile] = useState<SelectedVideo | null>(null);
+  const [isPicking, setIsPicking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export type Message = {
-  id: string;
-  conversation_id?: string;
-  sender_id?: string;
-  content?: string;
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: unknown;
-};
+  const onSelectedFile = async () => {
+    console.log("[VIDEO PICKER] Opening media library");
 
-type FetchConversationsResponse = {
-  conversations?: Conversation[];
-};
+    setIsPicking(true);
+    setError(null);
 
-type FetchMessagesResponse = {
-  messages?: Message[];
-};
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-type SendMessageResponse = {
-  message?: Message;
-  [key: string]: unknown;
-};
+      console.log("[VIDEO PICKER] Permission result:", permissionResult);
 
-type CreateConversationResponse = {
-  conversation?: Conversation;
-  error?: string;
-  [key: string]: unknown;
-};
+      if (!permissionResult.granted) {
+        console.log("[VIDEO PICKER] Permission denied");
 
-type MessagesState = {
-  conversations: Conversation[];
-  messages: Record<string, Message[]>;
-  activeConversation: Conversation | null;
-  loading: boolean;
-
-  loadConversations: () => Promise<void>;
-
-  createConversation: (
-    members: string[],
-    isGroup?: boolean,
-    title?: string | null
-  ) => Promise<CreateConversationResponse>;
-
-  openConversation: (
-    conversationId: string
-  ) => Promise<void>;
-
-  appendMessage: (
-    conversationId: string,
-    message: Message
-  ) => void;
-
-  sendMessage: (
-    conversationId: string,
-    content: string
-  ) => Promise<SendMessageResponse>;
-};
-
-export const useMessagesStore = create<MessagesState>(
-  (set, get) => ({
-    conversations: [],
-    messages: {},
-    activeConversation: null,
-    loading: false,
-
-    loadConversations: async () => {
-      try {
-        set({ loading: true });
-
-        const res =
-          (await fetchConversations()) as FetchConversationsResponse;
-
-        set({
-          conversations: res.conversations ?? [],
-          loading: false,
-        });
-      } catch (error) {
-        console.log(
-          "[LOAD CONVERSATIONS ERROR]",
-          error
-        );
-
-        set({
-          loading: false,
-        });
-      }
-    },
-
-    createConversation: async (
-      members,
-      isGroup = false,
-      title = null
-    ) => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const token = session?.access_token;
-
-      console.log(
-        "[CREATE CONVERSATION] session:",
-        session
-      );
-
-      console.log(
-        "[CREATE CONVERSATION] token:",
-        token
-      );
-
-      if (!token) {
-        console.log(
-          "[CREATE CONVERSATION] NO TOKEN FOUND"
-        );
-
-        return {
-          error: "No auth session",
-        };
+        setError("Permission to access your videos is required.");
+        return;
       }
 
-      try {
-        const response = await fetch(
-          `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/messaging/conversations`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              member_ids: members,
-              is_group: isGroup,
-              title,
-            }),
-          }
-        );
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["videos"],
+        allowsEditing: false,
+        allowsMultipleSelection: false,
+      });
 
-        const data =
-          (await response.json()) as CreateConversationResponse;
+      console.log("[VIDEO PICKER] Picker result:", result);
 
-        console.log(
-          "[CREATE CONVERSATION RESPONSE]",
-          data
-        );
-
-        if (response.status === 401) {
-          console.log(
-            "[CREATE CONVERSATION] Unauthorized - invalid session token"
-          );
-        }
-
-        if (data.conversation) {
-          set((state) => ({
-            conversations: [
-              data.conversation!,
-              ...state.conversations.filter(
-                (conversation) =>
-                  conversation.id !==
-                  data.conversation!.id
-              ),
-            ],
-          }));
-        }
-
-        return data;
-      } catch (error) {
-        console.log(
-          "[CREATE CONVERSATION ERROR]",
-          error
-        );
-
-        return {
-          error: "Failed to create conversation",
-        };
+      if (result.canceled) {
+        console.log("[VIDEO PICKER] User cancelled video selection");
+        return;
       }
-    },
 
-    openConversation: async (conversationId) => {
-      console.log(
-        "[OPEN CONVERSATION INIT]",
-        conversationId
-      );
+      const asset = result.assets?.[0];
 
-      try {
-        set({
-          loading: true,
-        });
-
-        const res =
-          (await fetchMessages(
-            conversationId
-          )) as FetchMessagesResponse;
-
-        console.log(
-          "[OPEN CONVERSATION FETCH]",
-          {
-            conversationId,
-            messages: res.messages?.length ?? 0,
-          }
-        );
-
-        const convoFromList =
-          get().conversations.find(
-            (conversation) =>
-              conversation.id === conversationId
-          );
-
-        console.log(
-          "[CONVERSATION FROM STORE]",
-          convoFromList
-        );
-
-        set((state) => ({
-          activeConversation:
-            convoFromList ??
-            state.activeConversation,
-
-          messages: {
-            ...state.messages,
-            [conversationId]:
-              res.messages ?? [],
-          },
-
-          loading: false,
-        }));
-      } catch (error) {
-        console.log(
-          "[OPEN CONVERSATION ERROR]",
-          error
-        );
-
-        set({
-          loading: false,
-        });
+      if (!asset) {
+        console.log("[VIDEO PICKER] No asset returned");
+        setError("No video was selected.");
+        return;
       }
-    },
 
-    appendMessage: (
-      conversationId,
-      message
-    ) => {
-      console.log(
-        "[STORE APPEND MESSAGE]",
-        message
-      );
-
-      set((state) => ({
-        messages: {
-          ...state.messages,
-
-          [conversationId]: [
-            ...(state.messages[
-              conversationId
-            ] ?? []),
-
-            message,
-          ],
-        },
-      }));
-    },
-
-    sendMessage: async (
-      conversationId,
-      content
-    ) => {
-      try {
-        const res =
-          (await sendMessageApi(
-            conversationId,
-            content
-          )) as SendMessageResponse;
-
-        console.log(
-          "[SEND MESSAGE RESPONSE]",
-          {
-            conversationId,
-            message: res.message,
-          }
-        );
-
-        return res;
-      } catch (error) {
-        console.log(
-          "[SEND MESSAGE ERROR]",
-          error
-        );
-
-        return {
-          error:
-            error instanceof Error
-              ? error.message
-              : "Failed to send message",
-        };
+      if (asset.type !== "video") {
+        console.log("[VIDEO PICKER] Selected asset is not a video");
+        setError("Please select a video.");
+        return;
       }
-    },
-  })
-);
 
+      const video = {
+        uri: asset.uri,
+        fileName: asset.fileName ?? null,
+        mimeType: asset.mimeType ?? null,
+        fileSize: asset.fileSize ?? null,
+        duration: asset.duration ?? null,
+        width: asset.width ?? null,
+        height: asset.height ?? null,
+      };
 
-frontend-expo\components\profile\WatchedHistoryGrid.tsx: 
-import React from "react";
+      console.log("[VIDEO PICKER] Video selected:", video);
 
+      setSelectedFile(video);
+    } catch (pickerError) {
+      console.log("[VIDEO PICKER] Error:", pickerError);
+
+      setError("Unable to select video. Please try again.");
+    } finally {
+      setIsPicking(false);
+      console.log("[VIDEO PICKER] Selection process finished");
+    }
+  };
+
+  const clearSelectedFile = () => {
+    console.log("[VIDEO PICKER] Clearing selected video");
+    setSelectedFile(null);
+    setError(null);
+  };
+
+  return {
+    selectedFile,
+    setSelectedFile,
+    onSelectedFile,
+    clearSelectedFile,
+    isPicking,
+    error,
+  };
+};
+
+export default useSelectFile;
+
+frontend-expo\components\upload\VideoPicker.tsx:
 import {
-  Image,
+  ActivityIndicator,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
-import { router } from "expo-router";
+import useSelectFile, {
+  SelectedVideo,
+} from "../../hooks/useSelectFile";
+import { videoPickerStyles } from "../../styles/upload/videoPicker.styles";
 
-import { watchedHistoryGridStyles } from "../../styles/profile/watchedHistoryGrid.styles";
-
-type Video = {
-  id: string;
-  video_url?: string | null;
-  thumbnail_url?: string | null;
-  caption?: string | null;
-  post_id?: string | null;
-  parent_post_id?: string | null;
-  video_part_id?: string | null;
-  part_number?: number | null;
-  part?: number | null;
+type VideoPickerProps = {
+  onVideoSelected: (video: SelectedVideo) => void;
 };
 
-type Props = {
-  videos: Video[];
-  isOwner: boolean;
-};
+export default function VideoPicker({
+  onVideoSelected,
+}: VideoPickerProps) {
+  const {
+    selectedFile,
+    onSelectedFile,
+    clearSelectedFile,
+    isPicking,
+    error,
+  } = useSelectFile();
 
-export default function WatchedHistoryGrid({
-  videos,
-  isOwner,
-}: Props) {
-  const openVideo = (video: Video) => {
-    const postId =
-      video.parent_post_id ||
-      video.post_id ||
-      video.id;
+  const handleSelectVideo = async () => {
+    console.log("[VIDEO PICKER COMPONENT] Select Video pressed");
 
-    const isPartVideo =
-      !!video.parent_post_id ||
-      !!video.part_number ||
-      !!video.video_part_id;
-
-    const part =
-      video.part_number ||
-      video.part ||
-      1;
-
-    router.push({
-      pathname: "/posts/[id]",
-      params: {
-        id: postId,
-        feed: "watched",
-        ...(isPartVideo ? { part: String(part) } : {}),
-      },
-    });
+    await onSelectedFile();
   };
 
-  if (!videos.length) {
+  const handleUseVideo = () => {
+    if (!selectedFile) {
+      console.log("[VIDEO PICKER COMPONENT] No video available");
+      return;
+    }
+
+    console.log(
+      "[VIDEO PICKER COMPONENT] Sending selected video to upload screen:",
+      selectedFile
+    );
+
+    onVideoSelected(selectedFile);
+  };
+
+  const handleClearVideo = () => {
+    console.log("[VIDEO PICKER COMPONENT] Removing selected video");
+    clearSelectedFile();
+  };
+
+  return (
+    <View style={videoPickerStyles.container}>
+      <TouchableOpacity
+        style={[
+          videoPickerStyles.button,
+          isPicking && videoPickerStyles.buttonDisabled,
+        ]}
+        onPress={handleSelectVideo}
+        disabled={isPicking}
+      >
+        {isPicking ? (
+          <View style={videoPickerStyles.buttonContent}>
+            <ActivityIndicator />
+            <Text style={videoPickerStyles.buttonText}>
+              Selecting video...
+            </Text>
+          </View>
+        ) : (
+          <Text style={videoPickerStyles.buttonText}>
+            Select Video
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      {selectedFile && (
+        <View style={videoPickerStyles.selectedInfo}>
+          <Text style={videoPickerStyles.selectedTitle}>
+            Video selected
+          </Text>
+
+          {selectedFile.fileName && (
+            <Text style={videoPickerStyles.selectedText}>
+              {selectedFile.fileName}
+            </Text>
+          )}
+
+          {selectedFile.duration !== null && (
+            <Text style={videoPickerStyles.selectedText}>
+              Duration: {Math.round(selectedFile.duration)} seconds
+            </Text>
+          )}
+
+          {selectedFile.fileSize !== null && (
+            <Text style={videoPickerStyles.selectedText}>
+              Size:{" "}
+              {(selectedFile.fileSize / (1024 * 1024)).toFixed(2)} MB
+            </Text>
+          )}
+
+          <View style={videoPickerStyles.actions}>
+            <TouchableOpacity
+              style={videoPickerStyles.useButton}
+              onPress={handleUseVideo}
+            >
+              <Text style={videoPickerStyles.useButtonText}>
+                Use This Video
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={videoPickerStyles.removeButton}
+              onPress={handleClearVideo}
+            >
+              <Text style={videoPickerStyles.removeButtonText}>
+                Remove
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {error && (
+        <Text style={videoPickerStyles.errorText}>
+          {error}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+frontend-expo\app\(tabs)\_layout.tsx:
+import { Tabs } from "expo-router";
+
+import TabIcon from "../../components/navigation/TabIcon";
+import { Colors } from "../../styles/colors";
+
+export default function TabsLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: Colors.accent,
+        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: Colors.background,
+          borderTopWidth: 0,
+          height: 70,
+          paddingTop: 8,
+          paddingBottom: 10,
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Explore",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              icon="compass"
+              title="Explore"
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="posts"
+        options={{
+          title: "Posts",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              icon="film"
+              title="Posts"
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="upload"
+        options={{
+          title: "Upload",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              icon="add-circle"
+              title="Upload"
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="subscriptions"
+        options={{
+          title: "Subscriptions",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              icon="star"
+              title="Subscriptions"
+            />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              icon="person"
+              title="Profile"
+            />
+          ),
+        }}
+      />
+    </Tabs>
+  );
+}
+
+frontend-expo\app\(tabs)\index.tsx:
+import { SafeAreaView } from "react-native";
+
+import AppHeader from "../../components/layout/AppHeader";
+import ExploreHeader from "../../components/feed/ExploreHeader";
+import TopicChips from "../../components/feed/TopicChips";
+import ExploreFeed from "../../components/feed/ExploreFeed";
+
+export default function ExploreTab() {
+  console.log("[SCREEN] Explore mounted");
+
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#000",
+      }}
+    >
+      <AppHeader />
+
+      <ExploreHeader />
+
+      <TopicChips />
+
+      <ExploreFeed />
+    </SafeAreaView>
+  );
+}
+
+
+all stles used here are present i didnt send them to avoid too much long texts
+and  i restart the expo and cleared the caache
+
+
+you can use profile as a guide
+
+frontend-expo\app\(tabs)\profile.tsx:
+import React, { useEffect } from "react";
+
+import { ActivityIndicator, SafeAreaView } from "react-native";
+
+import { router } from "expo-router";
+
+import { useAuthStore } from "../../stores/authStore";
+
+export default function ProfileTab() {
+  const user = useAuthStore((state) => state.user);
+  const loading = useAuthStore((state) => state.loading);
+  const hydrateAuth = useAuthStore((state) => state.hydrateAuth);
+
+  useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (!user?.id) {
+      router.replace("/(auth)/signin");
+      return;
+    }
+
+    router.replace({
+      pathname: "/user/[id]",
+      params: {
+        id: String(user.id),
+      },
+    });
+  }, [loading, user?.id]);
+
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#000",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <ActivityIndicator
+        size="large"
+        color="#6A00F4"
+      />
+    </SafeAreaView>
+  );
+}
+
+frontend-expo\app\user\[id].tsx:
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  ActivityIndicator,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+
+import {
+  router,
+  useLocalSearchParams,
+} from "expo-router";
+
+import { useAuthStore } from "../../stores/authStore";
+import { useUsersStore } from "../../stores/usersStore";
+import { useWatchedHistoryStore } from "../../stores/watchedHistoryStore";
+
+import ProfileHeader from "../../components/profile/ProfileHeader";
+import ProfileStats from "../../components/profile/ProfileStats";
+import ProfileActions from "../../components/profile/ProfileActions";
+import WatchedHistoryGrid from "../../components/profile/WatchedHistoryGrid";
+
+import { userProfileStyles } from "../../styles/profile/userProfile.styles";
+
+const PAGE_SIZE = 16;
+
+export default function UserProfileScreen() {
+  const { id } = useLocalSearchParams<{
+    id: string;
+  }>();
+
+  const authUser = useAuthStore(
+    (state) => state.user
+  );
+
+  const authLoading = useAuthStore(
+    (state) => state.loading
+  );
+
+  const hydrateAuth = useAuthStore(
+    (state) => state.hydrateAuth
+  );
+
+  const profileUser = useUsersStore(
+    (state: any) =>
+      id ? state.usersMap[id] : null
+  );
+
+  const usersLoading = useUsersStore(
+    (state: any) => state.loading
+  );
+
+  const fetchUserById = useUsersStore(
+    (state: any) => state.fetchUserById
+  );
+
+  const watchedVideos = useWatchedHistoryStore(
+    (state: any) => state.watchedVideos
+  );
+
+  const watchedLoading = useWatchedHistoryStore(
+    (state: any) => state.loading
+  );
+
+  const fetchWatchedHistory =
+    useWatchedHistoryStore(
+      (state: any) =>
+        state.fetchWatchedHistory
+    );
+
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const isOwner = useMemo(() => {
+    if (!authUser?.id || !profileUser?.id) {
+      return false;
+    }
+
     return (
-      <View style={watchedHistoryGridStyles.emptyContainer}>
-        <Text style={watchedHistoryGridStyles.emptyTitle}>
-          {isOwner
-            ? "You haven't watched any videos yet."
-            : "This user hasn't watched any videos yet."}
+      String(authUser.id) ===
+      String(profileUser.id)
+    );
+  }, [authUser?.id, profileUser?.id]);
+
+  const isAdmin =
+    authUser?.is_admin === true;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      watchedVideos.length / PAGE_SIZE
+    )
+  );
+
+  const pageVideos = useMemo(() => {
+    const start =
+      (currentPage - 1) * PAGE_SIZE;
+
+    const end =
+      start + PAGE_SIZE;
+
+    return watchedVideos.slice(
+      start,
+      end
+    );
+  }, [
+    currentPage,
+    watchedVideos,
+  ]);
+
+  const loadProfile = useCallback(
+    async () => {
+      if (!id) {
+        return;
+      }
+
+      await fetchUserById(id, true);
+      await fetchWatchedHistory(id);
+    },
+    [
+      id,
+      fetchUserById,
+      fetchWatchedHistory,
+    ]
+  );
+
+  useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    setCurrentPage(1);
+
+    loadProfile();
+  }, [id, loadProfile]);
+
+  const handleRefresh = async () => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setRefreshing(true);
+
+      await loadProfile();
+
+      setCurrentPage(1);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <SafeAreaView
+        style={userProfileStyles.center}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#6A00F4"
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (!id) {
+    return (
+      <SafeAreaView
+        style={userProfileStyles.center}
+      >
+        <Text
+          style={userProfileStyles.errorTitle}
+        >
+          Invalid profile
         </Text>
 
-        {isOwner && (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={watchedHistoryGridStyles.emptyButton}
-            onPress={() => router.push("/(tabs)")}
-          >
-            <Text
-              style={watchedHistoryGridStyles.emptyButtonText}
-            >
-              Start Watching
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        <Text
+          style={userProfileStyles.errorText}
+        >
+          We couldn't determine which profile
+          to display.
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (usersLoading && !profileUser) {
+    return (
+      <SafeAreaView
+        style={userProfileStyles.center}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#6A00F4"
+        />
+
+        <Text
+          style={userProfileStyles.loadingText}
+        >
+          Loading profile...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!profileUser) {
+    return (
+      <SafeAreaView
+        style={userProfileStyles.center}
+      >
+        <Text
+          style={userProfileStyles.errorTitle}
+        >
+          Profile not found
+        </Text>
+
+        <Text
+          style={userProfileStyles.errorText}
+        >
+          This profile may no longer exist.
+        </Text>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={watchedHistoryGridStyles.grid}>
-      {videos.map((video) => {
-        const caption =
-          video.caption?.trim() ||
-          "No caption";
+    <SafeAreaView
 
-        return (
-          <TouchableOpacity
-            key={video.id}
-            activeOpacity={0.85}
-            style={watchedHistoryGridStyles.card}
-            onPress={() => openVideo(video)}
-          >
-            <View
-              style={watchedHistoryGridStyles.thumbnailWrapper}
-            >
-              {video.thumbnail_url ? (
-                <Image
-                  source={{
-                    uri: video.thumbnail_url,
-                  }}
-                  style={
-                    watchedHistoryGridStyles.thumbnail
-                  }
-                />
-              ) : (
-                <View
-                  style={
-                    watchedHistoryGridStyles.videoPlaceholder
-                  }
-                >
-                  <Text
-                    style={
-                      watchedHistoryGridStyles.playIcon
-                    }
-                  >
-                    ▶
-                  </Text>
-                </View>
-              )}
-
-              <View
-                style={
-                  watchedHistoryGridStyles.playOverlay
-                }
-              >
-                <Text
-                  style={
-                    watchedHistoryGridStyles.playText
-                  }
-                >
-                  ▶
-                </Text>
-              </View>
-            </View>
-
-            <Text
-              numberOfLines={2}
-              style={watchedHistoryGridStyles.caption}
-            >
-              {caption}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
 
 if you want to fix it pls, first of all state what causes the problem, then state the code file path to be edited the old code to be replaced and then new code to replace it, the code to be deleted, and if a new code is to be added state exactly where it should be added that is the line before or after where it should be added. so i don't get confused.. and lastly dont add comments

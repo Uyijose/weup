@@ -44,3 +44,14 @@ Handle large comment threads efficiently.
 - Load more comments
 - Preserve scroll position
 - Reduce unnecessary re-renders
+
+
+
+
+
+make the subscribers_count on users table be insync once a user subscrier, 
+
+
+
+
+fix frontend test navigation page to creator page, it goes to local host
