@@ -3,11 +3,11 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+
 import { styles } from "../../styles/layout/appHeader.styles";
 
 export default function AppHeader() {
@@ -21,6 +21,8 @@ export default function AppHeader() {
       return;
     }
 
+    console.log("[HEADER SEARCH]", query);
+
     setSearchOpen(false);
     setSearchQuery("");
 
@@ -32,16 +34,23 @@ export default function AppHeader() {
     });
   };
 
+  const handleOpenMessages = () => {
+    console.log("[HEADER] Opening messages");
+
+    router.push("/chat");
+  };
+
   return (
     <View style={styles.container}>
       {searchOpen ? (
-        <View style={localStyles.searchContainer}>
+        <View style={styles.headerSearchContainer}>
           <Pressable
             onPress={() => {
               setSearchOpen(false);
               setSearchQuery("");
             }}
-            style={localStyles.backButton}
+            style={styles.headerBackButton}
+            hitSlop={10}
           >
             <Ionicons
               name="arrow-back"
@@ -58,12 +67,13 @@ export default function AppHeader() {
             autoFocus
             returnKeyType="search"
             onSubmitEditing={handleSearch}
-            style={localStyles.searchInput}
+            style={styles.headerSearchInput}
           />
 
           <Pressable
             onPress={handleSearch}
-            style={localStyles.searchSubmitButton}
+            style={styles.headerSearchSubmitButton}
+            hitSlop={10}
           >
             <Ionicons
               name="search-outline"
@@ -74,9 +84,7 @@ export default function AppHeader() {
         </View>
       ) : (
         <>
-          <Text style={styles.logo}>
-            WeUp
-          </Text>
+          <Text style={styles.logo}>WeUp</Text>
 
           <View style={styles.actions}>
             <Pressable
@@ -91,7 +99,7 @@ export default function AppHeader() {
             </Pressable>
 
             <Pressable
-              onPress={() => router.push("/chat/new")}
+              onPress={handleOpenMessages}
               hitSlop={10}
             >
               <Ionicons
@@ -114,30 +122,3 @@ export default function AppHeader() {
     </View>
   );
 }
-
-const localStyles = StyleSheet.create({
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  backButton: {
-    padding: 4,
-  },
-
-  searchInput: {
-    flex: 1,
-    height: 42,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "#1E1E1E",
-    color: "#EDEDED",
-    fontSize: 15,
-  },
-
-  searchSubmitButton: {
-    padding: 6,
-  },
-});

@@ -15,6 +15,8 @@ type ConversationMember = {
 export type Conversation = {
   id: string;
   title?: string | null;
+  last_message?: string | null;
+  last_message_at?: string | null;
   is_group?: boolean;
   members?: ConversationMember[];
   created_at?: string;
@@ -56,6 +58,7 @@ type MessagesState = {
   messages: Record<string, Message[]>;
   activeConversation: Conversation | null;
   loading: boolean;
+  error: string | null;
 
   loadConversations: () => Promise<void>;
 
@@ -86,26 +89,38 @@ export const useMessagesStore = create<MessagesState>(
     messages: {},
     activeConversation: null,
     loading: false,
+    error: null,
 
     loadConversations: async () => {
       try {
-        set({ loading: true });
+        console.log("[MESSAGES] loading conversations");
+
+        set({
+          loading: true,
+          error: null,
+        });
 
         const res =
           (await fetchConversations()) as FetchConversationsResponse;
 
+        console.log("[MESSAGES] conversations loaded", {
+          count: res.conversations?.length ?? 0,
+        });
+
         set({
           conversations: res.conversations ?? [],
           loading: false,
+          error: null,
         });
       } catch (error) {
-        console.log(
-          "[LOAD CONVERSATIONS ERROR]",
-          error
-        );
+        console.log("[LOAD CONVERSATIONS ERROR]", error);
 
         set({
           loading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to load conversations",
         });
       }
     },
@@ -142,6 +157,10 @@ export const useMessagesStore = create<MessagesState>(
       }
 
       try {
+        set({
+          error: null,
+        });
+
         const response = await fetch(
           `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/messaging/conversations`,
           {
@@ -207,6 +226,7 @@ export const useMessagesStore = create<MessagesState>(
       try {
         set({
           loading: true,
+          error: null,
         });
 
         const res =
@@ -254,6 +274,10 @@ export const useMessagesStore = create<MessagesState>(
 
         set({
           loading: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to open conversation",
         });
       }
     },

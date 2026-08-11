@@ -55,3 +55,8 @@ make the subscribers_count on users table be insync once a user subscrier,
 
 
 fix frontend test navigation page to creator page, it goes to local host
+
+
+
+
+when selecting a video it doesn't show the name of the file, it only show number. e.g 9897.mp4

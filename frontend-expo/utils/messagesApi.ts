@@ -1,7 +1,7 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "../lib/supabase";
 import { getAuthToken } from "./getAuthToken";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 async function authHeaders() {
   const token = await getAuthToken();
@@ -32,7 +32,7 @@ export async function fetchConversations() {
     return data;
 }
 
-export async function fetchMessages(conversationId) {
+export async function fetchMessages(conversationId: string) {
   const url = `${API_BASE}/api/messaging/conversations/${conversationId}/messages`;
 
   console.log("[FETCH MESSAGES] URL:", url);
@@ -54,7 +54,10 @@ export async function fetchMessages(conversationId) {
   return data;
 }
 
-export async function sendMessage(conversationId, content) {
+export async function sendMessage(
+  conversationId: string,
+  content: string
+) {
   const url = `${API_BASE}/api/messaging/conversations/${conversationId}/messages`;
 
   console.log("[SEND MESSAGE] URL:", url);

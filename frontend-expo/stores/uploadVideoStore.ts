@@ -1,8 +1,14 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
+import { uploadVideo } from "../services/upload.service";
 
 type SelectedFile = {
-  file: File;
+  file: {
+    uri: string;
+    name: string;
+    type: string;
+    size: number;
+  };
 };
 
 type UploadProgressInterval = ReturnType<typeof setInterval> | null;
@@ -19,17 +25,21 @@ type UploadStore = {
   progressInterval: UploadProgressInterval;
   redirecting: boolean;
   loading: boolean;
+  uploadError: string;
 
   setCaption: (caption: string) => void;
   setTopic: (topic: string) => void;
   setHashTags: (hashTags: string) => void;
   setSelectedFile: (file: SelectedFile | null) => void;
+  setUploadError: (error: string) => void;
   resetUpload: () => void;
   clearProgressInterval: () => void;
   trackProgress: (userId: string, token: string) => Promise<void>;
-  handlePost: (router: {
-    push: (path: string) => void;
-  }) => Promise<void>;
+  handlePost: () => Promise<{
+    success: boolean;
+    postId?: string;
+    hasParts?: boolean;
+  }>;
   uploadImage: (file: {
     uri: string;
     fileName?: string | null;
@@ -43,6 +53,7 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
   hashTags: "",
   tagShow: false,
   tagError: "",
+  uploadError: "",
 
   selectedFile: null,
   uploadProgress: 0,
@@ -67,10 +78,22 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
     set({ selectedFile: file });
   },
 
+  setUploadError: (error) => {
+    set({ uploadError: error });
+  },
+
   resetUpload: () => {
+    const existing = get().progressInterval;
+
+    if (existing) {
+      clearInterval(existing);
+    }
+
+    console.log("[UPLOAD] State reset");
+
     set({
       caption: "",
-      topic: "Music",
+      topic: "",
       hashTags: "",
       tagShow: false,
       tagError: "",
@@ -78,7 +101,9 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
       loading: false,
       uploadProgress: 0,
       uploadMessage: "",
+      progressInterval: null,
       redirecting: false,
+      uploadError: "",
     });
   },
 
@@ -95,6 +120,7 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
 
   trackProgress: async (userId, token) => {
     if (!token || !userId) {
+      console.error("[UPLOAD PROGRESS] Missing user or token");
       return;
     }
 
@@ -106,22 +132,47 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
 
     const interval = setInterval(async () => {
       try {
-        const sessionRefresh = await supabase.auth.getSession();
+        const sessionRefresh =
+          await supabase.auth.getSession();
+
         const freshToken =
-          sessionRefresh?.data?.session?.access_token;
+          sessionRefresh.data.session?.access_token;
 
         if (!freshToken) {
           clearInterval(interval);
+
           set({
             progressInterval: null,
             loading: false,
+            uploadError: "Authentication failed.",
           });
+
+          console.error(
+            "[UPLOAD PROGRESS] Authentication failed"
+          );
+
           return;
         }
 
         const backendUrl =
           process.env.EXPO_PUBLIC_BACKEND_URL ||
           process.env.NEXT_PUBLIC_BACKEND_URL;
+
+        if (!backendUrl) {
+          clearInterval(interval);
+
+          set({
+            progressInterval: null,
+            loading: false,
+            uploadError: "Upload service is not configured.",
+          });
+
+          console.error(
+            "[UPLOAD PROGRESS] Backend URL missing"
+          );
+
+          return;
+        }
 
         const res = await fetch(
           `${backendUrl}/api/videos/progress/${userId}`,
@@ -138,35 +189,55 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
           set({
             progressInterval: null,
             loading: false,
+            uploadError:
+              "Unable to get upload progress.",
           });
+
+          console.error(
+            "[UPLOAD PROGRESS] Progress request failed:",
+            res.status
+          );
 
           return;
         }
 
         const data = await res.json();
 
-        set((state) => {
-          if (
-            data?.percent === 0 &&
-            data?.message?.includes("failed")
-          ) {
-            clearInterval(interval);
+        console.log(
+          "[UPLOAD PROGRESS]",
+          data?.percent,
+          data?.message
+        );
 
-            return {
-              uploadProgress: 0,
-              uploadMessage: data.message,
-              loading: false,
-              progressInterval: null,
-            };
-          }
+        if (
+          data?.percent === 0 &&
+          data?.message?.toLowerCase?.().includes("failed")
+        ) {
+          clearInterval(interval);
 
-          return {
-            uploadProgress:
-              data?.percent ?? state.uploadProgress,
-            uploadMessage:
-              data?.message ?? state.uploadMessage,
-          };
-        });
+          set({
+            uploadProgress: 0,
+            uploadMessage: data.message,
+            loading: false,
+            progressInterval: null,
+            uploadError:
+              "Unable to upload video.",
+          });
+
+          console.error(
+            "[UPLOAD PROGRESS] Processing failed:",
+            data.message
+          );
+
+          return;
+        }
+
+        set((state) => ({
+          uploadProgress:
+            data?.percent ?? state.uploadProgress,
+          uploadMessage:
+            data?.message ?? state.uploadMessage,
+        }));
 
         if (data?.percent >= 100) {
           clearInterval(interval);
@@ -174,14 +245,27 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
           set({
             progressInterval: null,
             uploadProgress: 100,
-            uploadMessage: "processing complete",
+            uploadMessage: "Processing complete",
+            loading: false,
           });
+
+          console.log(
+            "[UPLOAD PROGRESS] Upload completed"
+          );
         }
-      } catch {
+      } catch (error) {
         clearInterval(interval);
+
+        console.error(
+          "[UPLOAD PROGRESS] Error:",
+          error
+        );
 
         set({
           progressInterval: null,
+          loading: false,
+          uploadError:
+            "Unable to get upload progress.",
         });
       }
     }, 1000);
@@ -191,7 +275,7 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
     });
   },
 
-  handlePost: async (router) => {
+  handlePost: async () => {
     const {
       caption,
       topic,
@@ -200,251 +284,164 @@ export const useUploadVideoStore = create<UploadStore>((set, get) => ({
       trackProgress,
     } = get();
 
-    if (!selectedFile) {
-      return;
+    if (get().loading) {
+      console.log(
+        "[UPLOAD BLOCKED] Already uploading"
+      );
+
+      return {
+        success: false,
+      };
     }
 
-    if (get().loading) {
-      console.log("[UPLOAD BLOCKED] already uploading");
-      return;
+    if (!selectedFile) {
+      const message =
+        "Please upload a video";
+
+      set({
+        uploadError: message,
+      });
+
+      console.error(
+        "[UPLOAD VALIDATION]",
+        message
+      );
+
+      return {
+        success: false,
+      };
     }
 
     set({
       loading: true,
+      uploadError: "",
+      uploadProgress: 0,
+      uploadMessage: "Starting upload...",
     });
+
+    console.log(
+      "[UPLOAD] Upload started"
+    );
 
     try {
       const session =
         await supabase.auth.getSession();
 
+      const userId =
+        session.data.session?.user?.id;
+
       const token =
         session.data.session?.access_token;
 
-      if (!token) {
-        throw new Error("User is not authenticated");
-      }
-
-      const backendUrl =
-        process.env.EXPO_PUBLIC_BACKEND_URL ||
-        process.env.NEXT_PUBLIC_BACKEND_URL;
-
-      const uploadRes = await fetch(
-        `${backendUrl}/api/upload/signed-url`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            fileType: "video",
-            caption: caption || "",
-            originalFileName:
-              selectedFile.file.name,
-          }),
-        }
-      );
-
-      const uploadData =
-        await uploadRes.json();
-
-      if (
-        selectedFile.file.size >
-        50 * 1024 * 1024
-      ) {
+      if (!userId || !token) {
         throw new Error(
-          "FILE_TOO_LARGE_FOR_SINGLE_UPLOAD"
+          "User is not authenticated"
         );
       }
 
-      await new Promise<void>(
-        (resolve, reject) => {
-          const xhr = new XMLHttpRequest();
+      const finalTopic =
+        topic === "Other"
+          ? hashTags.trim()
+          : topic.trim();
 
-          xhr.open(
-            "PUT",
-            uploadData.uploadUrl
-          );
+      console.log(
+        "[UPLOAD] Topic:",
+        finalTopic
+      );
 
-          xhr.setRequestHeader(
-            "Content-Type",
-            selectedFile.file.type ||
-              "video/mp4"
-          );
+      const result =
+        await uploadVideo(
+          selectedFile.file,
+          caption.trim(),
+          finalTopic,
+          (progress) => {
+            set({
+              uploadProgress: progress,
+              uploadMessage:
+                "Uploading video...",
+            });
 
-          xhr.upload.onprogress = (
-            event
-          ) => {
-            if (
-              event.lengthComputable
-            ) {
-              const percent = Math.min(
-                Math.floor(
-                  (event.loaded /
-                    event.total) *
-                    10
-                ),
-                9
-              );
-
-              set({
-                uploadProgress: percent,
-                uploadMessage:
-                  "uploading video",
-              });
-            }
-          };
-
-          xhr.onload = () => {
-            if (
-              xhr.status >= 200 &&
-              xhr.status < 300
-            ) {
-              resolve();
-            } else {
-              reject(
-                new Error(
-                  "UPLOAD_FAILED"
-                )
-              );
-            }
-          };
-
-          xhr.onerror = () => {
-            reject(
-              new Error("UPLOAD_FAILED")
+            console.log(
+              "[UPLOAD] Upload progress:",
+              progress
             );
-          };
+          }
+        );
 
-          xhr.send(
-            selectedFile.file
-          );
-        }
+      console.log(
+        "[UPLOAD] Processing request completed:",
+        result
       );
 
       set({
         uploadProgress: 10,
         uploadMessage:
-          "upload complete, waiting for download to begin...",
-        loading: true,
+          "Processing video...",
       });
 
-      const progressSession =
-        await supabase.auth.getSession();
+      console.log(
+        "[UPLOAD] Processing started"
+      );
 
-      const userId =
-        progressSession.data.session?.user
-          ?.id;
+      trackProgress(
+        userId,
+        token
+      );
 
-      const tokenForProgress =
-        progressSession.data.session
-          ?.access_token;
+      if (!result.success) {
+        set({
+          loading: false,
+          uploadError:
+            "Unable to upload video.",
+        });
 
-      if (
-        userId &&
-        tokenForProgress
-      ) {
-        trackProgress(
-          userId,
-          tokenForProgress
-        );
-      }
-
-      let processRes;
-      let data: any = null;
-
-      try {
-        processRes = await fetch(
-          `${backendUrl}/api/videos/process`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              fileKey:
-                uploadData.fileKey,
-              caption,
-              topic:
-                topic === "Other"
-                  ? hashTags
-                  : topic,
-            }),
-          }
+        console.error(
+          "[UPLOAD] Upload failed"
         );
 
-        try {
-          data =
-            await processRes.json();
-        } catch {
-          data = null;
-        }
-      } catch {
-        data = null;
-      }
-
-      set({
-        uploadMessage:
-          "processing video...",
-      });
-
-      const checkReadyAndRedirect =
-        () => {
-          const state = get();
-
-          if (!data) {
-            setTimeout(
-              checkReadyAndRedirect,
-              1000
-            );
-            return;
-          }
-
-          if (
-            data.success === false
-          ) {
-            set({
-              loading: false,
-            });
-            return;
-          }
-
-          if (
-            state.uploadProgress <
-            100
-          ) {
-            setTimeout(
-              checkReadyAndRedirect,
-              1000
-            );
-            return;
-          }
-
-          set({
-            redirecting: true,
-            uploadMessage:
-              "Redirecting to your post...",
-            loading: true,
-          });
-
-          if (data.hasParts) {
-            router.push(
-              `/posts/${data.postId}?part=1`
-            );
-          } else {
-            router.push(
-              `/posts/${data.postId}`
-            );
-          }
+        return {
+          success: false,
         };
+      }
 
-      checkReadyAndRedirect();
-    } catch {
       set({
         loading: false,
+        uploadProgress: 100,
+        uploadMessage:
+          "Processing complete",
       });
+
+      console.log(
+        "[UPLOAD] Upload completed successfully:",
+        result.postId
+      );
+
+      return result;
+    } catch (error: any) {
+      console.error(
+        "[UPLOAD FAILED]",
+        error
+      );
+
+      const existing =
+        get().progressInterval;
+
+      if (existing) {
+        clearInterval(existing);
+      }
+
+      set({
+        loading: false,
+        progressInterval: null,
+        uploadError:
+          error?.message ||
+          "Unable to upload video.",
+        uploadMessage: "",
+      });
+
+      return {
+        success: false,
+      };
     }
   },
 

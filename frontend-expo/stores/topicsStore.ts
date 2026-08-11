@@ -1,31 +1,66 @@
 import { create } from "zustand";
-import { supabase } from "../utils/supabaseClient";
 
-export const useTopicsStore = create((set) => ({
-  topics: [],
-  loading: false,
+import { supabase } from "../lib/supabase";
 
-  fetchTopics: async () => {
-    console.log("fetchTopics called");
+export type Topic = {
+  name: string;
+  total_posts: number;
+};
 
-    set({ loading: true });
+type TopicsStore = {
+  topics: Topic[];
+  loading: boolean;
+  fetchTopics: () => Promise<void>;
+};
 
-    const { data, error } = await supabase
-      .from("topics")
-      .select("name, total_posts")
-      .order("total_posts", { ascending: false });
+export const useTopicsStore =
+  create<TopicsStore>((set) => ({
+    topics: [],
+    loading: false,
 
-    if (error) {
-      console.log("fetchTopics error", error);
-      set({ loading: false });
-      return;
-    }
+    fetchTopics: async () => {
+      console.log(
+        "[TOPICS STORE] fetchTopics called"
+      );
 
-    console.log("topics fetched", data);
+      set({
+        loading: true,
+      });
 
-    set({
-      topics: data,
-      loading: false
-    });
-  }
-}));
+      const { data, error } =
+        await supabase
+          .from("topics")
+          .select(
+            "name, total_posts"
+          )
+          .order(
+            "total_posts",
+            {
+              ascending: false,
+            }
+          );
+
+      if (error) {
+        console.log(
+          "[TOPICS STORE] fetchTopics error:",
+          error
+        );
+
+        set({
+          loading: false,
+        });
+
+        return;
+      }
+
+      console.log(
+        "[TOPICS STORE] topics fetched:",
+        data
+      );
+
+      set({
+        topics: data ?? [],
+        loading: false,
+      });
+    },
+  }));

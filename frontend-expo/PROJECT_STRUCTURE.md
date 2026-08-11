@@ -128,6 +128,8 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   └── SearchPostsSection.tsx
 │   ├── skeleton
 │   └── upload
+│       ├── CaptionInput.tsx
+│       ├── TopicSelector.tsx
 │       ├── UploadProgress.tsx
 │       ├── VideoPicker.tsx
 │       └── VideoPreview.tsx
@@ -222,6 +224,13 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── searchInput.styles.ts
 │   │   ├── searchPostCard.styles.ts
 │   │   └── searchPostsSection.styles.ts
+│   ├── upload
+│   │   ├── captionInput.styles.ts
+│   │   ├── topicSelector.styles.ts
+│   │   ├── upload.styles.ts
+│   │   ├── uploadProgress.styles.ts
+│   │   ├── videoPicker.styles.ts
+│   │   └── videoPreview.styles.ts
 │   ├── colors.ts
 │   ├── global.ts
 │   ├── shadows.ts
@@ -249,7 +258,6 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 ├── CLAUDE.md
 ├── expo-env.d.ts
 ├── extra_plan.md
-├── frontend-expo-file-structure.md
 ├── future_plan.md
 ├── LICENSE
 ├── package-lock.json

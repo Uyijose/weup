@@ -36,4 +36,29 @@ export const styles = StyleSheet.create({
 
     gap: Spacing.xl,
   },
+
+  headerSearchContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  headerBackButton: {
+    padding: 4,
+  },
+
+  headerSearchInput: {
+    flex: 1,
+    height: 42,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#1E1E1E",
+    color: "#EDEDED",
+    fontSize: 15,
+  },
+
+  headerSearchSubmitButton: {
+    padding: 6,
+  },
 });
