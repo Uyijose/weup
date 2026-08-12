@@ -13,6 +13,8 @@ import postsRoutes from "./routes/posts/posts.routes.js";
 import reportsRoutes from "./routes/reports/reports.routes.js";
 import reportsAdminRoutes from "./routes/reports/reports.admin.routes.js";
 import messagingRoutes from "./routes/messaging/messaging.routes.js";
+import notificationsRoutes from "./routes/notifications/notifications.routes.js";
+import { requireAuth } from "./middleware/auth.middleware.js";
 
 const app = express();
 
@@ -36,6 +38,7 @@ app.use("/api/posts", postsRoutes);
 app.use("/api/reports", reportsRoutes);
 app.use("/api/admin/reports", reportsAdminRoutes);
 app.use("/api/messaging", messagingRoutes);
+app.use("/api/notifications", requireAuth, notificationsRoutes);
 
 
 export default app;
