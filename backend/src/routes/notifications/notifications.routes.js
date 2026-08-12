@@ -1,5 +1,7 @@
 import express from "express";
 
+import { requireAuth } from "../../middleware/auth.middleware.js";
+
 import {
   getNotifications,
   getUnreadNotificationCount,
@@ -9,15 +11,19 @@ import {
 
 const router = express.Router();
 
+/* -------------------------------------------------
+   AUTHENTICATION
+-------------------------------------------------- */
+
+router.use(requireAuth);
+
+/* -------------------------------------------------
+   GET NOTIFICATIONS
+-------------------------------------------------- */
+
 router.get("/", async (req, res) => {
   try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
+    const userId = req.user.id;
 
     const notifications = await getNotifications(
       userId,
@@ -43,15 +49,13 @@ router.get("/", async (req, res) => {
   }
 });
 
+/* -------------------------------------------------
+   GET UNREAD COUNT
+-------------------------------------------------- */
+
 router.get("/unread-count", async (req, res) => {
   try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
+    const userId = req.user.id;
 
     const unreadCount =
       await getUnreadNotificationCount(userId);
@@ -71,15 +75,13 @@ router.get("/unread-count", async (req, res) => {
   }
 });
 
+/* -------------------------------------------------
+   MARK ONE AS READ
+-------------------------------------------------- */
+
 router.patch("/:id/read", async (req, res) => {
   try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
+    const userId = req.user.id;
 
     const notification =
       await markNotificationAsRead(
@@ -102,15 +104,13 @@ router.patch("/:id/read", async (req, res) => {
   }
 });
 
+/* -------------------------------------------------
+   MARK ALL AS READ
+-------------------------------------------------- */
+
 router.patch("/read-all", async (req, res) => {
   try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
+    const userId = req.user.id;
 
     const notifications =
       await markAllNotificationsAsRead(userId);

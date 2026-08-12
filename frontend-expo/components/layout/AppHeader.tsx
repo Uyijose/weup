@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, {
+  useEffect,
+  useState,
+} from "react";
 import {
   Pressable,
   Text,
@@ -9,10 +12,33 @@ import {
 } from "react-native";
 
 import { styles } from "../../styles/layout/appHeader.styles";
+import { useNotificationsStore } from "../../stores/notificationsStore";
 
 export default function AppHeader() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const unreadCount =
+    useNotificationsStore(
+      (state) => state.unreadCount
+    );
+
+  const loadUnreadCount =
+    useNotificationsStore(
+      (state) => state.loadUnreadCount
+    );
+
+  useEffect(() => {
+    loadUnreadCount();
+  }, [loadUnreadCount]);
+
+  const handleOpenNotifications = () => {
+    console.log(
+      "[HEADER] Opening notifications"
+    );
+
+    router.push("/notifications");
+  };
 
   const handleSearch = () => {
     const query = searchQuery.trim();
@@ -109,12 +135,47 @@ export default function AppHeader() {
               />
             </Pressable>
 
-            <Pressable hitSlop={10}>
+            <Pressable
+              onPress={handleOpenNotifications}
+              hitSlop={10}
+              style={{
+                position: "relative",
+              }}
+            >
               <Ionicons
                 name="notifications-outline"
                 size={24}
                 color="#EDEDED"
               />
+
+              {unreadCount > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -7,
+                    right: -9,
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    backgroundColor: "#FF3B30",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 3,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 9,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {unreadCount > 99
+                      ? "99+"
+                      : unreadCount}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </>

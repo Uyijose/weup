@@ -29,6 +29,45 @@ export async function createNotification({
     throw new Error("Notification body is required");
   }
 
+  /*
+   * Prevent duplicate event notifications.
+   *
+   * We only perform this check when there is a
+   * concrete reference object.
+   *
+   * This prevents retries from creating duplicates
+   * for the same actor + recipient + event.
+   *
+   * Multiple messages/comments can still create
+   * separate notifications because their reference_id
+   * will be different.
+   */
+  if (
+    actorId &&
+    referenceId &&
+    referenceType
+  ) {
+    const { data: existing, error: existingError } =
+      await supabase
+        .from("notifications")
+        .select("*")
+        .eq("recipient_id", recipientId)
+        .eq("actor_id", actorId)
+        .eq("type", type)
+        .eq("reference_id", referenceId)
+        .eq("reference_type", referenceType)
+        .limit(1)
+        .maybeSingle();
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    if (existing) {
+      return existing;
+    }
+  }
+
   const { data, error } = await supabase
     .from("notifications")
     .insert({

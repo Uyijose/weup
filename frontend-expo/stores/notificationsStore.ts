@@ -121,31 +121,35 @@ export const useNotificationsStore =
           return;
         }
 
-        set((state) => ({
-          notifications:
-            state.notifications.map(
-              (notification) =>
-                notification.id ===
-                notificationId
-                  ? {
-                      ...notification,
-                      read: true,
-                    }
-                  : notification
-            ),
-          unreadCount:
+        set((state) => {
+          const notification =
             state.notifications.find(
-              (notification) =>
-                notification.id ===
-                notificationId
-            )?.read
-              ? state.unreadCount
-              : Math.max(
+              (item) => item.id === notificationId
+            );
+
+          const shouldDecreaseUnread =
+            notification && !notification.read;
+
+          return {
+            notifications:
+              state.notifications.map(
+                (item) =>
+                  item.id === notificationId
+                    ? {
+                        ...item,
+                        read: true,
+                      }
+                    : item
+              ),
+            unreadCount: shouldDecreaseUnread
+              ? Math.max(
                   state.unreadCount - 1,
                   0
-                ),
-          error: null,
-        }));
+                )
+              : state.unreadCount,
+            error: null,
+          };
+        });
       } catch (error) {
         console.log(
           "[NOTIFICATIONS STORE] MARK READ ERROR",
