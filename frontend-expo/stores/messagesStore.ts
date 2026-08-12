@@ -1,57 +1,25 @@
 import { create } from "zustand";
-import { supabase } from "../lib/supabase";
 import {
+  createConversation as createConversationApi,
   fetchConversations,
   fetchMessages,
   sendMessage as sendMessageApi,
-} from "../utils/messagesApi";
+} from "../services/messaging.service";
 
-type ConversationMember = {
-  id: string;
-  username?: string | null;
-  avatar_url?: string | null;
-};
+import type {
+  Conversation,
+  Message,
+} from "../services/messaging.service";
 
-export type Conversation = {
-  id: string;
-  title?: string | null;
-  last_message?: string | null;
-  last_message_at?: string | null;
-  is_group?: boolean;
-  members?: ConversationMember[];
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: unknown;
-};
+import type {
+  CreateConversationResponse,
+  SendMessageResponse,
+} from "../services/messaging.service";
 
-export type Message = {
-  id: string;
-  conversation_id?: string;
-  sender_id?: string;
-  content?: string;
-  created_at?: string;
-  updated_at?: string;
-  [key: string]: unknown;
-};
-
-type FetchConversationsResponse = {
-  conversations?: Conversation[];
-};
-
-type FetchMessagesResponse = {
-  messages?: Message[];
-};
-
-type SendMessageResponse = {
-  message?: Message;
-  [key: string]: unknown;
-};
-
-type CreateConversationResponse = {
-  conversation?: Conversation;
-  error?: string;
-  [key: string]: unknown;
-};
+export type {
+  Conversation,
+  Message,
+} from "../services/messaging.service";
 
 type MessagesState = {
   conversations: Conversation[];
@@ -101,11 +69,15 @@ export const useMessagesStore = create<MessagesState>(
         });
 
         const res =
-          (await fetchConversations()) as FetchConversationsResponse;
+          await fetchConversations();
 
-        console.log("[MESSAGES] conversations loaded", {
-          count: res.conversations?.length ?? 0,
-        });
+        if (res.error) {
+          set({
+            loading: false,
+            error: String(res.error),
+          });
+          return;
+        }
 
         set({
           conversations: res.conversations ?? [],
@@ -113,7 +85,10 @@ export const useMessagesStore = create<MessagesState>(
           error: null,
         });
       } catch (error) {
-        console.log("[LOAD CONVERSATIONS ERROR]", error);
+        console.log(
+          "[LOAD CONVERSATIONS ERROR]",
+          error
+        );
 
         set({
           loading: false,
@@ -130,65 +105,16 @@ export const useMessagesStore = create<MessagesState>(
       isGroup = false,
       title = null
     ) => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const token = session?.access_token;
-
-      console.log(
-        "[CREATE CONVERSATION] session:",
-        session
-      );
-
-      console.log(
-        "[CREATE CONVERSATION] token:",
-        token
-      );
-
-      if (!token) {
-        console.log(
-          "[CREATE CONVERSATION] NO TOKEN FOUND"
-        );
-
-        return {
-          error: "No auth session",
-        };
-      }
-
       try {
-        set({
-          error: null,
-        });
-
-        const response = await fetch(
-          `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/messaging/conversations`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              member_ids: members,
-              is_group: isGroup,
-              title,
-            }),
-          }
-        );
-
         const data =
-          (await response.json()) as CreateConversationResponse;
-
-        console.log(
-          "[CREATE CONVERSATION RESPONSE]",
-          data
-        );
-
-        if (response.status === 401) {
-          console.log(
-            "[CREATE CONVERSATION] Unauthorized - invalid session token"
+          await createConversationApi(
+            members,
+            isGroup,
+            title
           );
+
+        if (data.error) {
+          return data;
         }
 
         if (data.conversation) {
@@ -212,7 +138,10 @@ export const useMessagesStore = create<MessagesState>(
         );
 
         return {
-          error: "Failed to create conversation",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to create conversation",
         };
       }
     },
@@ -230,17 +159,17 @@ export const useMessagesStore = create<MessagesState>(
         });
 
         const res =
-          (await fetchMessages(
+          await fetchMessages(
             conversationId
-          )) as FetchMessagesResponse;
+          );
 
-        console.log(
-          "[OPEN CONVERSATION FETCH]",
-          {
-            conversationId,
-            messages: res.messages?.length ?? 0,
-          }
-        );
+        if (res.error) {
+          set({
+            loading: false,
+            error: String(res.error),
+          });
+          return;
+        }
 
         const convoFromList =
           get().conversations.find(
@@ -265,6 +194,7 @@ export const useMessagesStore = create<MessagesState>(
           },
 
           loading: false,
+          error: null,
         }));
       } catch (error) {
         console.log(
@@ -291,19 +221,29 @@ export const useMessagesStore = create<MessagesState>(
         message
       );
 
-      set((state) => ({
-        messages: {
-          ...state.messages,
+      set((state) => {
+        const existingMessages =
+          state.messages[conversationId] ?? [];
 
-          [conversationId]: [
-            ...(state.messages[
-              conversationId
-            ] ?? []),
+        const alreadyExists =
+          existingMessages.some(
+            (item) => item.id === message.id
+          );
 
-            message,
-          ],
-        },
-      }));
+        if (alreadyExists) {
+          return state;
+        }
+
+        return {
+          messages: {
+            ...state.messages,
+            [conversationId]: [
+              ...existingMessages,
+              message,
+            ],
+          },
+        };
+      });
     },
 
     sendMessage: async (
@@ -311,11 +251,20 @@ export const useMessagesStore = create<MessagesState>(
       content
     ) => {
       try {
+        const trimmedContent =
+          content.trim();
+
+        if (!trimmedContent) {
+          return {
+            error: "Message cannot be empty",
+          };
+        }
+
         const res =
-          (await sendMessageApi(
+          await sendMessageApi(
             conversationId,
-            content
-          )) as SendMessageResponse;
+            trimmedContent
+          );
 
         console.log(
           "[SEND MESSAGE RESPONSE]",

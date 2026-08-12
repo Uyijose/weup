@@ -14,3 +14,6 @@ help me state the files to create/edit the file path to add them and the command
 http://localhost:8081/creator/Tester
 
 http://localhost:8081/creator/become-creator
+
+
+npx tsc --noEmit

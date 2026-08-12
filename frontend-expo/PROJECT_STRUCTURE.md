@@ -32,6 +32,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   └── upload.tsx
 │   ├── chat
 │   │   ├── [id].tsx
+│   │   ├── index.tsx
 │   │   └── new.tsx
 │   ├── creator
 │   │   ├── [id].tsx
@@ -159,7 +160,8 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── posts.service.ts
 │   ├── search.service.ts
 │   ├── upload.service.ts
-│   └── users.service.ts
+│   ├── users.service.ts
+│   └── userSearch.service.ts
 ├── stores
 │   ├── authStore.ts
 │   ├── commentsStore.ts
@@ -208,6 +210,11 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   └── videoPlayer.styles.ts
 │   ├── layout
 │   │   └── appHeader.styles.ts
+│   ├── messaging
+│   │   ├── chat.styles.ts
+│   │   ├── chatBubble.styles.ts
+│   │   ├── conversationItem.styles.ts
+│   │   └── messages.styles.ts
 │   ├── navigation
 │   │   └── tabIcon.styles.ts
 │   ├── profile

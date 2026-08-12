@@ -99,4 +99,21 @@ export const creatorProfileStyles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
+
+  messageButton: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    backgroundColor: "#181818",
+    borderWidth: 1,
+    borderColor: "#333333",
+  },
+
+  messageText: {
+    color: "#1a1919",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });

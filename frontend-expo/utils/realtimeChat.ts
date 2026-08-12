@@ -1,19 +1,43 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "../lib/supabase";
 
-let messageChannel = null;
-let typingChannel = null;
-let presenceChannel = null;
+type TypingPayload = {
+  user_id: string;
+  state: "typing" | "stop";
+};
+
+type PresenceState = Record<
+  string,
+  Array<{
+    user_id?: string;
+    online?: boolean;
+    last_seen?: string;
+  }>
+>;
+
+type SubscribeToConversationParams = {
+  conversationId: string;
+  userId: string;
+  onMessage?: (message: Record<string, unknown>) => void;
+  onTyping?: (data: TypingPayload) => void;
+  onPresence?: (state: PresenceState) => void;
+};
+
+let typingChannel: ReturnType<typeof supabase.channel> | null = null;
+let typingTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export function subscribeToConversation({
   conversationId,
   userId,
   onMessage,
   onTyping,
-  onPresence
-}) {
+  onPresence,
+}: SubscribeToConversationParams) {
   console.log("[REALTIME] subscribing:", conversationId);
 
-  messageChannel = supabase
+  /*
+   * MESSAGE CHANNEL
+   */
+  const messageChannel = supabase
     .channel(`messages:${conversationId}`)
     .on(
       "postgres_changes",
@@ -21,95 +45,264 @@ export function subscribeToConversation({
         event: "INSERT",
         schema: "public",
         table: "messages",
-        filter: `conversation_id=eq.${conversationId}`
+        filter: `conversation_id=eq.${conversationId}`,
       },
       (payload) => {
         console.log("[REALTIME MESSAGE]", payload.new);
-        onMessage(payload.new);
+
+        onMessage?.(
+          payload.new as Record<string, unknown>
+        );
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log(
+        "[REALTIME MESSAGE CHANNEL STATUS]",
+        conversationId,
+        status
+      );
+    });
 
-  typingChannel = supabase.channel(
+  /*
+   * TYPING CHANNEL
+   */
+  const currentTypingChannel = supabase.channel(
     `typing:${conversationId}`,
-    { config: { broadcast: { self: false } } }
+    {
+      config: {
+        broadcast: {
+          self: false,
+        },
+      },
+    }
   );
 
-  typingChannel
-    .on("broadcast", { event: "typing" }, (payload) => {
-      console.log("[REALTIME TYPING]", payload.payload);
-      onTyping(payload.payload);
-    })
-    .subscribe();
+  typingChannel = currentTypingChannel;
 
-  presenceChannel = supabase.channel(
+  currentTypingChannel
+    .on(
+      "broadcast",
+      {
+        event: "typing",
+      },
+      (payload) => {
+        console.log(
+          "[REALTIME TYPING]",
+          payload.payload
+        );
+
+        onTyping?.(
+          payload.payload as TypingPayload
+        );
+      }
+    )
+    .subscribe((status) => {
+      console.log(
+        "[REALTIME TYPING CHANNEL STATUS]",
+        conversationId,
+        status
+      );
+    });
+
+  /*
+   * PRESENCE CHANNEL
+   */
+  const presenceChannel = supabase.channel(
     `presence:${conversationId}`,
     {
-      config: { presence: { key: conversationId } }
+      config: {
+        presence: {
+          key: userId,
+        },
+      },
     }
   );
 
   presenceChannel
-    .on("presence", { event: "sync" }, () => {
-      const state = presenceChannel.presenceState();
-      console.log("[REALTIME PRESENCE]", state);
-      onPresence(state);
-    })
-    .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-            console.log("[PRESENCE JOIN]", userId);
+    .on(
+      "presence",
+      {
+        event: "sync",
+      },
+      () => {
+        const state =
+          presenceChannel.presenceState() as PresenceState;
 
-            await presenceChannel.track({
+        console.log(
+          "[REALTIME PRESENCE]",
+          state
+        );
+
+        onPresence?.(state);
+      }
+    )
+    .subscribe(async (status) => {
+      console.log(
+        "[REALTIME PRESENCE CHANNEL STATUS]",
+        conversationId,
+        status
+      );
+
+      if (status !== "SUBSCRIBED") {
+        return;
+      }
+
+      console.log(
+        "[PRESENCE JOIN]",
+        userId
+      );
+
+      /*
+       * Supabase's current TypeScript definition
+       * returns a status value from track(), not
+       * an object containing { error }.
+       */
+      try {
+        const trackStatus =
+          await presenceChannel.track({
             user_id: userId,
             online: true,
-            last_seen: new Date().toISOString()
-            });
-        }
+            last_seen:
+              new Date().toISOString(),
+          });
+
+        console.log(
+          "[PRESENCE TRACK STATUS]",
+          trackStatus
+        );
+      } catch (error) {
+        console.log(
+          "[PRESENCE TRACK ERROR]",
+          error
+        );
+      }
     });
 
-    window.addEventListener("beforeunload", async () => {
-        console.log("[PRESENCE LEAVE]", userId);
-
-        await supabase
-            .from("users")
-            .update({
-            online: false,
-            last_seen: new Date().toISOString()
-            })
-            .eq("id", userId);
-        });
-
+  /*
+   * CLEANUP
+   */
   return () => {
-    console.log("[REALTIME] unsubscribing:", conversationId);
-    supabase.removeChannel(messageChannel);
-    supabase.removeChannel(typingChannel);
-    supabase.removeChannel(presenceChannel);
+    console.log(
+      "[REALTIME] unsubscribing:",
+      conversationId
+    );
+
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+      typingTimeout = null;
+    }
+
+    if (
+      typingChannel ===
+      currentTypingChannel
+    ) {
+      typingChannel = null;
+    }
+
+    void supabase.removeChannel(
+      messageChannel
+    );
+
+    void supabase.removeChannel(
+      currentTypingChannel
+    );
+
+    void supabase.removeChannel(
+      presenceChannel
+    );
   };
 }
 
-let typingTimeout = null;
+/*
+ * TYPING INDICATOR
+ */
+export function emitTyping(
+  conversationId: string,
+  userId: string
+): void {
+  if (!typingChannel) {
+    console.log(
+      "[TYPING] No active typing channel",
+      conversationId
+    );
 
-export function emitTyping(conversationId, userId) {
-  if (!typingChannel) return;
-
-  if (!typingTimeout) {
-    typingChannel.send({
-      type: "broadcast",
-      event: "typing",
-      payload: { user_id: userId, state: "typing" }
-    });
-    console.log("[TYPING START]", userId);
+    return;
   }
 
-  clearTimeout(typingTimeout);
+  /*
+   * Only send "typing" once until the timeout
+   * is restarted.
+   */
+  if (!typingTimeout) {
+    void typingChannel
+      .send({
+        type: "broadcast",
+        event: "typing",
+        payload: {
+          user_id: userId,
+          state: "typing",
+        },
+      })
+      .then((status) => {
+        console.log(
+          "[TYPING START STATUS]",
+          status
+        );
+      })
+      .catch((error) => {
+        console.log(
+          "[TYPING START ERROR]",
+          error
+        );
+      });
+
+    console.log(
+      "[TYPING START]",
+      userId
+    );
+  }
+
+  /*
+   * Reset the timeout every time the user
+   * types another character.
+   */
+  if (typingTimeout) {
+    clearTimeout(typingTimeout);
+  }
 
   typingTimeout = setTimeout(() => {
-    typingChannel.send({
-      type: "broadcast",
-      event: "typing",
-      payload: { user_id: userId, state: "stop" }
-    });
-    console.log("[TYPING STOP]", userId);
+    if (!typingChannel) {
+      typingTimeout = null;
+      return;
+    }
+
+    void typingChannel
+      .send({
+        type: "broadcast",
+        event: "typing",
+        payload: {
+          user_id: userId,
+          state: "stop",
+        },
+      })
+      .then((status) => {
+        console.log(
+          "[TYPING STOP STATUS]",
+          status
+        );
+      })
+      .catch((error) => {
+        console.log(
+          "[TYPING STOP ERROR]",
+          error
+        );
+      });
+
+    console.log(
+      "[TYPING STOP]",
+      userId
+    );
+
     typingTimeout = null;
   }, 5000);
 }

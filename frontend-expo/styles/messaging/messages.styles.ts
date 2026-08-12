@@ -67,58 +67,6 @@ export const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  conversationItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#171717",
-  },
-
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#252525",
-    marginRight: 12,
-  },
-
-  avatarText: {
-    color: "#EDEDED",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-
-  conversationContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  conversationItemPressed: {
-    opacity: 0.65,
-  },
-
-  conversationTitle: {
-    color: "#F2F2F2",
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 5,
-  },
-
-  conversationMeta: {
-    color: "#8E8E8E",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  conversationMetaUnread: {
-    color: "#D8D8D8",
-    fontWeight: "500",
-  },
-
   emptyContainer: {
     flex: 1,
     alignItems: "center",

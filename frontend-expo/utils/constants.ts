@@ -1,45 +1,44 @@
-import { BsCode, BsEmojiSunglasses } from "react-icons/bs";
-import { GiCakeSlice, GiGalaxy, GiLipstick } from "react-icons/gi";
-import { FaPaw, FaMedal, FaGamepad } from "react-icons/fa";
+export type Topic = {
+  name: string;
+  icon: string;
+};
 
-import { Other } from "../components/icon/Other";
-
-export const topics = [
+export const topics: Topic[] = [
   {
     name: "development",
-    icon: <BsCode />,
+    icon: "code-slash-outline",
   },
   {
     name: "comedy",
-    icon: <BsEmojiSunglasses />,
+    icon: "happy-outline",
   },
   {
     name: "gaming",
-    icon: <FaGamepad />,
+    icon: "game-controller-outline",
   },
   {
     name: "food",
-    icon: <GiCakeSlice />,
+    icon: "restaurant-outline",
   },
   {
     name: "dance",
-    icon: <GiGalaxy />,
+    icon: "musical-notes-outline",
   },
   {
     name: "beauty",
-    icon: <GiLipstick />,
+    icon: "color-palette-outline",
   },
   {
     name: "animals",
-    icon: <FaPaw />,
+    icon: "paw-outline",
   },
   {
     name: "sports",
-    icon: <FaMedal />,
+    icon: "trophy-outline",
   },
   {
     name: "Other",
-    icon: <Other />,
+    icon: "ellipsis-horizontal-circle-outline",
   },
 ];
 
@@ -47,29 +46,28 @@ export const footerLinks = [
   {
     title: "Company",
     links: [
-      { label: "About", path: "/about" },
-      { label: "Newsroom", path: "/newsroom" },
-      { label: "Contact", path: "/contact" },
-      { label: "Careers", path: "/careers" },
+      { label: "About", path: "/legal/about" },
+      { label: "Newsroom", path: "/legal/newsroom" },
+      { label: "Contact", path: "/legal/contact" },
+      { label: "Careers", path: "/legal/careers" },
     ],
   },
   {
     title: "Programs",
     links: [
       { label: "Advertise", path: "/advertise" },
-      { label: "Developers", path: "/developers" },
+      { label: "Developers", path: "/legal/developers" },
       { label: "Creator Portal", action: "creator-portal" },
     ],
   },
   {
     title: "Legal & Safety",
     links: [
-      { label: "Help", path: "/help" },
-      { label: "Safety", path: "/safety" },
-      { label: "Terms", path: "/legal" },
-      { label: "Privacy", path: "/legal" },
-      { label: "Community Guidelines", path: "/legal" },
+      { label: "Help", path: "/legal/help" },
+      { label: "Safety", path: "/legal/safety" },
+      { label: "Terms", path: "/legal/about" },
+      { label: "Privacy", path: "/legal/about" },
+      { label: "Community Guidelines", path: "/legal/safety" },
     ],
   },
 ];
-

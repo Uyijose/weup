@@ -76,7 +76,7 @@ export default function ProfileActions({
     }
 
     if (isOwner) {
-      router.push("/chat/new");
+      router.push("/chat");
       return;
     }
 

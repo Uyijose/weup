@@ -7,6 +7,7 @@ import React, {
 
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -24,6 +25,7 @@ import { supabase } from "../../lib/supabase";
 
 import { useAuthStore } from "../../stores/authStore";
 import { useUsersStore } from "../../stores/usersStore";
+import { useMessagesStore } from "../../stores/messagesStore";
 
 import CreatorHeader from "../../components/creator/CreatorHeader";
 import CreatorStats from "../../components/creator/CreatorStats";
@@ -74,6 +76,14 @@ export default function CreatorProfileScreen() {
     useUsersStore(
       (state) => state.toggleSubscription
     );
+
+  const createConversation =
+    useMessagesStore(
+      (state) => state.createConversation
+    );
+
+  const [messageLoading, setMessageLoading] =
+    useState(false);
 
   const usersLoading = useUsersStore(
     (state) => state.loading
@@ -350,6 +360,86 @@ export default function CreatorProfileScreen() {
     });
   };
 
+  const handleMessageCreator =
+    async () => {
+      if (messageLoading) {
+        return;
+      }
+
+      if (!authUser?.id) {
+        router.push("/(auth)/signin");
+        return;
+      }
+
+      if (!creator?.id) {
+        return;
+      }
+
+      if (isOwner) {
+        router.push("/chat");
+        return;
+      }
+
+      try {
+        setMessageLoading(true);
+
+        const response =
+          await createConversation(
+            [
+              authUser.id,
+              creator.id,
+            ],
+            false,
+            null
+          );
+
+        if (response.error) {
+          console.log(
+            "[CREATOR MESSAGE ERROR]",
+            response.error
+          );
+
+          Alert.alert(
+            "Unable to start conversation",
+            "Please try again."
+          );
+
+          return;
+        }
+
+        const conversationId =
+          response.conversation?.id;
+
+        if (!conversationId) {
+          Alert.alert(
+            "Unable to start conversation",
+            "Please try again."
+          );
+
+          return;
+        }
+
+        router.push({
+          pathname: "/chat/[id]",
+          params: {
+            id: conversationId,
+          },
+        });
+      } catch (error) {
+        console.log(
+          "[CREATOR MESSAGE ERROR]",
+          error
+        );
+
+        Alert.alert(
+          "Message failed",
+          "Unable to open this conversation."
+        );
+      } finally {
+        setMessageLoading(false);
+      }
+    };
+
   const handleDeleteVideo = async (
     videoId: string
     ) => {
@@ -564,6 +654,25 @@ export default function CreatorProfileScreen() {
               </Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            style={creatorProfileStyles.messageButton}
+            activeOpacity={0.8}
+            onPress={handleMessageCreator}
+            disabled={messageLoading}
+          >
+            <Text
+              style={
+                creatorProfileStyles.messageText
+              }
+            >
+              {messageLoading
+                ? "Opening..."
+                : isOwner
+                  ? "Messages"
+                  : "Message"}
+            </Text>
+          </TouchableOpacity>
 
         <CreatorDescription
           description={
