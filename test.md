@@ -1,207 +1,330 @@
-Yes. At this point, **5.8.18–5.8.25 should be implemented together**, because realtime, the notification screen, the item component, and the header badge depend on each other.
+Yes. **That is exactly the next stage.** You have already proven that the notification infrastructure works independently. Now we need to connect the actual user actions to `createNotification()`.
 
-There is also one important correction before we proceed:
+Your current backend already has authenticated like/comment routes, and the notification service exists. For example, your likes route currently inserts the like and returns immediately; it does not yet call the notification service.  Likewise, your comments route creates the comment but currently stops there. 
 
-> Your backend notification routes currently read `req.user?.id`, but your `app.js` does **not** apply `requireAuth` to `/api/notifications`.
+I would do this in **two stages**:
 
-That explains the `401 Unauthorized` you previously got when testing the endpoint without authentication, and we should fix that properly rather than weakening the route.
+1. **First:** move the realtime listener to the authenticated app level.
+2. **Second:** connect **Like → Comment → Subscribe → Message** to the notification service.
 
-Below is the implementation in the exact **Git Bash → file → code → test** format.
-
----
-
-# Phase 5.8.18–5.8.25 — Complete Notification Frontend Implementation
-
-## Final files involved
-
-### Create
-
-```text
-frontend-expo/utils/realtimeNotifications.ts
-frontend-expo/app/notifications/index.tsx
-frontend-expo/components/notifications/NotificationItem.tsx
-frontend-expo/styles/notifications/notifications.styles.ts
-```
-
-### Edit
-
-```text
-frontend-expo/components/layout/AppHeader.tsx
-```
-
-We should also make one small backend correction:
-
-```text
-backend/src/app.js
-```
+Don't change pagination or retention yet. They are not necessary for getting the core system working.
 
 ---
 
-# 1. First fix the backend authentication
+# 1. Final architecture
 
-Your current:
+You want this:
 
 ```text
-backend/src/app.js
+                    AUTHENTICATED EXPO APP
+                             │
+                             ▼
+                   NotificationProvider
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+       loadNotifications()          Realtime subscription
+       loadUnreadCount()                    │
+              │                             │
+              └──────────────┬──────────────┘
+                             ▼
+                    notificationsStore
+                             ▲
+                             │
+                    Supabase notifications
+                             ▲
+                             │
+                     Backend services
+                             ▲
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+        LIKE              COMMENT          SUBSCRIBE
+          │                  │                  │
+          └──────────────────┼──────────────────┘
+                             │
+                          MESSAGE
 ```
 
-has:
+Your existing Expo structure already has `app/_layout.tsx`, `context`, `services`, `stores`, etc., so we can fit this into what you already have. 
 
-```js
-app.use("/api/notifications", notificationsRoutes);
+---
+
+# 2. Phase 5.8.26–5.8.28: Global notification listener
+
+You currently have the realtime listener being used by the notifications screen. **We should move ownership of the listener to `AuthProvider`**, because your existing `AuthProvider` already knows when the user logs in/logs out. Your existing provider calls `hydrateAuth()` and `listenToAuthChanges()`. 
+
+This is cleaner than creating another authentication provider.
+
+## Create this file
+
+```text
+frontend-expo/context/NotificationProvider.tsx
 ```
 
-But your notification routes expect:
+### Git Bash
 
-```js
-req.user?.id
+From the `frontend-expo` directory:
+
+```bash
+mkdir -p context
+touch context/NotificationProvider.tsx
 ```
 
-`req.user` only exists after `requireAuth` runs.
+---
 
-## Replace this
+# 3. `NotificationProvider.tsx`
 
-```js
-app.use("/api/notifications", notificationsRoutes);
+Put this complete code inside:
+
+```tsx
+import React, {
+  ReactNode,
+  useEffect,
+  useRef,
+} from "react";
+
+import { useAuthStore } from "../stores/authStore";
+import { useNotificationsStore } from "../stores/notificationsStore";
+import {
+  subscribeToNotifications,
+} from "../utils/realtimeNotifications";
+
+interface Props {
+  children: ReactNode;
+}
+
+export default function NotificationProvider({
+  children,
+}: Props) {
+  const user = useAuthStore((state) => state.user);
+  const loading = useAuthStore((state) => state.loading);
+
+  const loadNotifications =
+    useNotificationsStore(
+      (state) => state.loadNotifications
+    );
+
+  const loadUnreadCount =
+    useNotificationsStore(
+      (state) => state.loadUnreadCount
+    );
+
+  const unsubscribeRef = useRef<
+    (() => void) | null
+  >(null);
+
+  useEffect(() => {
+    // Do nothing while auth is still loading.
+    if (loading) {
+      return;
+    }
+
+    // Clean up any previous subscription.
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
+    }
+
+    // User logged out.
+    if (!user?.id) {
+      return;
+    }
+
+    console.log(
+      "[NOTIFICATION PROVIDER] Initializing for:",
+      user.id
+    );
+
+    let active = true;
+
+    const initialize = async () => {
+      try {
+        /*
+         * Load existing notifications first.
+         */
+        await Promise.all([
+          loadNotifications(),
+          loadUnreadCount(),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        /*
+         * Then subscribe to future notifications.
+         */
+        console.log(
+          "[NOTIFICATION PROVIDER] Subscribing..."
+        );
+
+        unsubscribeRef.current =
+          subscribeToNotifications(user.id);
+      } catch (error) {
+        console.log(
+          "[NOTIFICATION PROVIDER] Initialization error:",
+          error
+        );
+      }
+    };
+
+    initialize();
+
+    return () => {
+      active = false;
+
+      if (unsubscribeRef.current) {
+        console.log(
+          "[NOTIFICATION PROVIDER] Cleaning up subscription"
+        );
+
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, [
+    user?.id,
+    loading,
+    loadNotifications,
+    loadUnreadCount,
+  ]);
+
+  return <>{children}</>;
+}
 ```
 
-## With this
+---
 
-```js
-app.use(
-  "/api/notifications",
-  requireAuth,
-  notificationsRoutes
-);
+# 4. Edit `AuthProvider.tsx`
+
+Your existing provider is already handling authentication. Don't duplicate that logic.
+
+Open:
+
+```text
+frontend-expo/context/AuthProvider.tsx
 ```
-
-But first you need to import the middleware.
-
-### At the top of `backend/src/app.js`
 
 Add:
 
-```js
-import { requireAuth } from "./middleware/auth.middleware.js";
+```tsx
+import NotificationProvider from "./NotificationProvider";
 ```
 
-So the relevant section becomes:
+Then replace the current:
 
-```js
-import messagingRoutes from "./routes/messaging/messaging.routes.js";
-import notificationsRoutes from "./routes/notifications/notifications.routes.js";
-import { requireAuth } from "./middleware/auth.middleware.js";
+```tsx
+return <>{children}</>;
 ```
 
-Then:
+with:
 
-```js
-app.use(
-  "/api/notifications",
-  requireAuth,
-  notificationsRoutes
+```tsx
+return (
+  <NotificationProvider>
+    {children}
+  </NotificationProvider>
 );
 ```
 
-### Important
+So the end becomes:
 
-Do **not** put authentication inside every notification route.
-
-This:
-
-```js
-app.use(
-  "/api/notifications",
-  requireAuth,
-  notificationsRoutes
+```tsx
+return (
+  <NotificationProvider>
+    {children}
+  </NotificationProvider>
 );
 ```
 
-means all of these automatically require authentication:
+That's all.
+
+This means:
 
 ```text
-GET   /api/notifications
-GET   /api/notifications/unread-count
-PATCH /api/notifications/:id/read
-PATCH /api/notifications/read-all
+AuthProvider
+   ↓
+NotificationProvider
+   ↓
+Expo application
 ```
+
+When the authenticated user changes, the notification provider changes with them.
 
 ---
 
-# 2. Restart the backend
+# 5. IMPORTANT: remove the notification-screen realtime subscription
 
-From your backend folder:
+This is important.
 
-```bash
-cd backend
-npm run dev
+You **do not want**:
+
+```text
+NotificationProvider
+        ↓
+Realtime subscription #1
+
+Notifications screen
+        ↓
+Realtime subscription #2
 ```
 
-or whatever command you normally use to start your backend.
+because then one notification could be received twice.
+
+Your previous logs showed the subscription being created when the notification screen opened:
+
+```text
+[REALTIME NOTIFICATIONS] Subscribing for user...
+[REALTIME NOTIFICATIONS] Status: SUBSCRIBED
+```
+
+That should now happen at the authenticated-app level.
+
+Open:
+
+```text
+frontend-expo/app/notifications/index.tsx
+```
+
+Find the `useEffect` that calls:
+
+```tsx
+subscribeToNotifications(...)
+```
+
+and **remove that realtime subscription effect entirely**.
+
+The notification screen should only:
+
+```text
+load existing notifications
+display them
+mark them read
+```
+
+It should **not own realtime** anymore.
 
 ---
 
-# 3. Test authentication properly
+# 6. Your `realtimeNotifications.ts`
 
-Do **not** simply open:
-
-```text
-http://localhost:5000/api/notifications/unread-count
-```
-
-in your browser anymore.
-
-That request contains no:
-
-```text
-Authorization: Bearer <token>
-```
-
-So `401` is expected.
-
-Your Expo application already has:
-
-```text
-getAuthToken()
-```
-
-which we will use.
-
----
-
-# 4. Create realtime notification utility
-
-From the Expo project root:
-
-```bash
-mkdir -p utils
-touch utils/realtimeNotifications.ts
-```
-
-File:
+You already have this file:
 
 ```text
 frontend-expo/utils/realtimeNotifications.ts
 ```
 
-## Complete code
+Keep it.
 
-```ts
+It should essentially look like:
+
+```tsx
 import { supabase } from "../lib/supabase";
 import { useNotificationsStore } from "../stores/notificationsStore";
-import type { Notification } from "../types/notification";
 
 export function subscribeToNotifications(
   userId: string
-): () => void {
-  if (!userId) {
-    console.log(
-      "[REALTIME NOTIFICATIONS] No user ID provided"
-    );
-
-    return () => {};
-  }
-
+) {
   console.log(
     "[REALTIME NOTIFICATIONS] Subscribing for user:",
     userId
@@ -223,12 +346,9 @@ export function subscribeToNotifications(
           payload.new
         );
 
-        const notification =
-          payload.new as Notification;
-
         useNotificationsStore
           .getState()
-          .addNotification(notification);
+          .addNotification(payload.new as any);
       }
     )
     .subscribe((status) => {
@@ -249,995 +369,535 @@ export function subscribeToNotifications(
 }
 ```
 
----
-
-# 5. Important Supabase step — enable Realtime
-
-This is required.
-
-Go to:
-
-**Supabase Dashboard → Database → Replication**
-
-Find the `notifications` table and make sure it is enabled for Realtime / Postgres Changes.
-
-Depending on the current Supabase dashboard UI, you may see the table under the Realtime publication.
-
-The database publication should contain:
-
-```text
-notifications
-```
-
-If you prefer SQL, run this in Supabase SQL Editor:
-
-```sql
-alter publication supabase_realtime
-add table public.notifications;
-```
-
-### If you get:
-
-```text
-relation "public.notifications" is already member of publication
-```
-
-that's fine.
-
-It means Realtime is already enabled.
-
----
-
-# 6. Check Supabase RLS
-
-Your notification table should have RLS enabled.
-
-Run:
-
-```sql
-alter table public.notifications enable row level security;
-```
-
-For the Expo Realtime client to receive only the authenticated user's notifications, create a SELECT policy.
-
-```sql
-create policy "Users can view their own notifications"
-on public.notifications
-for select
-to authenticated
-using (recipient_id = auth.uid());
-```
-
-If you already created this policy, **do not create it again**.
-
-You can check in:
-
-```text
-Supabase
-→ Database
-→ Tables
-→ notifications
-→ RLS Policies
-```
-
-You should have a policy equivalent to:
-
-```text
-Users can view their own notifications
-SELECT
-recipient_id = auth.uid()
-```
-
-### Important architecture
-
-Your backend uses:
-
-```text
-SUPABASE_SERVICE_ROLE_KEY
-```
-
-for server-side notification creation.
-
-The Expo application uses:
-
-```text
-SUPABASE_ANON_KEY
-```
-
-for Realtime.
-
-That is exactly what we want.
-
----
-
-# 7. Create the notifications screen
-
-Run:
-
-```bash
-mkdir -p app/notifications
-touch app/notifications/index.tsx
-```
-
-File:
-
-```text
-frontend-expo/app/notifications/index.tsx
-```
-
-## Complete code
+The key thing is that it returns:
 
 ```tsx
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, {
-  useCallback,
-  useEffect,
-} from "react";
+return () => {
+  supabase.removeChannel(channel);
+};
+```
+
+so the provider can clean it up.
+
+---
+
+# 7. Now the important part: Like → Notification
+
+Your current likes route is:
+
+```text
+backend/src/routes/likes/likes.routes.js
+```
+
+It currently does:
+
+```text
+check existing like
+      ↓
+if exists → unlike
+      ↓
+otherwise insert like
+      ↓
+return liked:true
+```
+
+Your existing route is authenticated with `requireAuth`. 
+
+We need:
+
+```text
+like succeeds
+     ↓
+get post owner
+     ↓
+createLikeNotification()
+     ↓
+return response
+```
+
+---
+
+# 8. Edit `likes.routes.js`
+
+Open:
+
+```text
+backend/src/routes/likes/likes.routes.js
+```
+
+### Current import
+
+You currently have:
+
+```js
+import express from "express";
+import { supabase } from "../../services/supabase.service.js";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+```
+
+Replace it with:
+
+```js
+import express from "express";
+import { supabase } from "../../services/supabase.service.js";
+import { requireAuth } from "../../middleware/auth.middleware.js";
 import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  Text,
-  View,
-} from "react-native";
+  createLikeNotification,
+} from "../../services/notifications/notifications.service.js";
+```
 
-import NotificationItem from "../../components/notifications/NotificationItem";
-import { useNotificationsStore } from "../../stores/notificationsStore";
-import { styles } from "../../styles/notifications/notifications.styles";
-import { subscribeToNotifications } from "../../utils/realtimeNotifications";
-import { useAuthStore } from "../../stores/authStore";
+---
 
-export default function NotificationsScreen() {
-  const {
-    notifications,
-    loading,
-    error,
-    loadNotifications,
-    loadUnreadCount,
-  } = useNotificationsStore();
+# 9. Replace the successful like section
 
-  const user = useAuthStore((state) => state.user);
+Currently you have:
 
-  const loadData = useCallback(async () => {
-    await Promise.all([
-      loadNotifications(),
-      loadUnreadCount(),
-    ]);
-  }, [
-    loadNotifications,
-    loadUnreadCount,
-  ]);
+```js
+await supabase.from("likes").insert({
+  user_id: req.user.id,
+  post_id: post_id || null,
+  video_part_id: video_part_id || null,
+});
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+res.json({ liked: true });
+```
 
-  useEffect(() => {
-    if (!user?.id) {
-      return;
-    }
+Replace it with:
 
-    const unsubscribe =
-      subscribeToNotifications(user.id);
+```js
+const { error: likeError } = await supabase
+  .from("likes")
+  .insert({
+    user_id: req.user.id,
+    post_id: post_id || null,
+    video_part_id: video_part_id || null,
+  });
 
-    return unsubscribe;
-  }, [user?.id]);
-
-  const handleNotificationPress = (
-    notification: {
-      id: string;
-      type: string;
-      reference_id?: string | null;
-      reference_type?: string | null;
-      actor_id?: string | null;
-    }
-  ) => {
-    if (
-      notification.type === "like" ||
-      notification.type === "comment"
-    ) {
-      if (notification.reference_id) {
-        router.push(
-          `/posts/${notification.reference_id}`
-        );
-      }
-
-      return;
-    }
-
-    if (notification.type === "follow") {
-      if (notification.actor_id) {
-        router.push(
-          `/user/${notification.actor_id}`
-        );
-      }
-
-      return;
-    }
-
-    if (notification.type === "message") {
-      if (notification.reference_id) {
-        router.push(
-          `/chat/${notification.reference_id}`
-        );
-      }
-
-      return;
-    }
-
-    console.log(
-      "[NOTIFICATIONS] No navigation target:",
-      notification
-    );
-  };
-
-  if (loading && notifications.length === 0) {
-    return (
-      <View style={styles.centerState}>
-        <ActivityIndicator size="large" />
-
-        <Text style={styles.stateText}>
-          Loading notifications...
-        </Text>
-      </View>
-    );
-  }
-
-  if (error && notifications.length === 0) {
-    return (
-      <View style={styles.centerState}>
-        <Ionicons
-          name="alert-circle-outline"
-          size={42}
-          color="#EDEDED"
-        />
-
-        <Text style={styles.stateTitle}>
-          Unable to load notifications
-        </Text>
-
-        <Text style={styles.stateText}>
-          {error}
-        </Text>
-
-        <Pressable
-          style={styles.retryButton}
-          onPress={loadData}
-        >
-          <Text style={styles.retryButtonText}>
-            Try Again
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          style={styles.backButton}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color="#EDEDED"
-          />
-        </Pressable>
-
-        <Text style={styles.headerTitle}>
-          Notifications
-        </Text>
-
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <NotificationItem
-            notification={item}
-            onPress={() =>
-              handleNotificationPress(item)
-            }
-          />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={loadData}
-          />
-        }
-        contentContainerStyle={
-          notifications.length === 0
-            ? styles.emptyList
-            : styles.list
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="notifications-off-outline"
-              size={48}
-              color="#777777"
-            />
-
-            <Text style={styles.emptyTitle}>
-              No notifications yet
-            </Text>
-
-            <Text style={styles.emptyText}>
-              You'll see likes, comments, follows,
-              and messages here.
-            </Text>
-          </View>
-        }
-      />
-    </View>
+if (likeError) {
+  console.error(
+    "[LIKES] INSERT ERROR",
+    likeError
   );
+
+  return res.status(400).json({
+    error: likeError.message,
+  });
+}
+
+/*
+ * Only create a notification for post likes.
+ */
+if (post_id) {
+  const { data: post, error: postError } =
+    await supabase
+      .from("posts")
+      .select("id,user_id")
+      .eq("id", post_id)
+      .single();
+
+  if (postError) {
+    console.error(
+      "[LIKES] FAILED TO FETCH POST OWNER",
+      postError
+    );
+  } else if (post?.user_id) {
+    let actorName = "Someone";
+
+    const { data: actor } = await supabase
+      .from("users")
+      .select("username,full_name")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    actorName =
+      actor?.full_name ||
+      actor?.username ||
+      "Someone";
+
+    try {
+      await createLikeNotification({
+        recipientId: post.user_id,
+        actorId: req.user.id,
+        postId: post.id,
+        actorName,
+      });
+    } catch (notificationError) {
+      /*
+       * Do not make a successful like fail
+       * just because notification creation failed.
+       */
+      console.error(
+        "[LIKES] NOTIFICATION ERROR",
+        notificationError
+      );
+    }
+  }
+}
+
+return res.json({
+  liked: true,
+});
+```
+
+This is deliberately done **after the like succeeds**.
+
+---
+
+# 10. Why this is safe for duplicate likes
+
+Your current route already checks:
+
+```js
+.eq("user_id", req.user.id)
+.eq(column, value)
+.maybeSingle();
+```
+
+before inserting. 
+
+Therefore:
+
+```text
+First like
+→ insert like
+→ notification
+
+Second request while already liked
+→ delete like
+→ NO notification
+```
+
+That's exactly what Phase 5.8.14 wants.
+
+---
+
+# 11. Comment → Notification
+
+Your current comment endpoint inserts:
+
+```js
+const { data, error } = await supabase
+  .from("comments")
+  .insert({
+    post_id: post_id || null,
+    video_part_id: video_part_id || null,
+    user_id: req.user.id,
+    comment,
+    image_url,
+  })
+```
+
+and returns the comment. 
+
+We need to notify the owner after the insert succeeds.
+
+---
+
+## Edit imports
+
+At the top of:
+
+```text
+backend/src/routes/comments/comments.routes.js
+```
+
+change:
+
+```js
+import express from "express";
+import { supabase } from "../../services/supabase.service.js";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+```
+
+to:
+
+```js
+import express from "express";
+import { supabase } from "../../services/supabase.service.js";
+import { requireAuth } from "../../middleware/auth.middleware.js";
+import {
+  createCommentNotification,
+} from "../../services/notifications/notifications.service.js";
+```
+
+---
+
+# 12. Add comment notification
+
+Find:
+
+```js
+if (error) return res.status(400).json({ error: error.message });
+
+res.json(data);
+```
+
+inside the `POST /` route.
+
+Replace that portion with:
+
+```js
+if (error) {
+  return res.status(400).json({
+    error: error.message,
+  });
+}
+
+/*
+ * Notify the post owner.
+ */
+if (post_id && data?.user_id) {
+  const { data: post, error: postError } =
+    await supabase
+      .from("posts")
+      .select("id,user_id")
+      .eq("id", post_id)
+      .single();
+
+  if (postError) {
+    console.error(
+      "[COMMENTS] FAILED TO FETCH POST OWNER",
+      postError
+    );
+  } else if (post?.user_id) {
+    const { data: actor } = await supabase
+      .from("users")
+      .select("username,full_name")
+      .eq("id", req.user.id)
+      .maybeSingle();
+
+    const actorName =
+      actor?.full_name ||
+      actor?.username ||
+      "Someone";
+
+    try {
+      await createCommentNotification({
+        recipientId: post.user_id,
+        actorId: req.user.id,
+        postId: post.id,
+        actorName,
+      });
+    } catch (notificationError) {
+      console.error(
+        "[COMMENTS] NOTIFICATION ERROR",
+        notificationError
+      );
+    }
+  }
+}
+
+return res.json(data);
+```
+
+Your existing notification service already prevents self-notifications:
+
+```js
+if (recipientId === actorId) {
+  return null;
 }
 ```
 
+so a user commenting on their own post won't generate a notification.
+
 ---
 
-# 8. Important: check your AuthStore
+# 13. Subscribe → Notification
 
-I used:
+Your subscription implementation is slightly different from likes/comments.
 
-```ts
-const user = useAuthStore((state) => state.user);
-```
-
-because your existing project already has:
+Your Expo creator page currently uses:
 
 ```text
-stores/authStore.ts
+usersStore.toggleSubscription()
 ```
 
-But if your `authStore` calls the authenticated user something different, such as:
+and the subscription data is stored in:
 
-```ts
-currentUser
+```text
+subscriptions
+```
+
+with:
+
+```text
+subscriber_id
+creator_id
+```
+
+as you've already established. 
+
+This means we need to find the **actual `toggleSubscription()` implementation** before changing it.
+
+### Don't add notification code directly to `creator/[id].tsx`.
+
+That's important.
+
+The notification must be created by the backend, not by:
+
+```text
+Expo → Supabase insert → notification
+```
+
+because a malicious client could manufacture notifications.
+
+The correct flow is:
+
+```text
+Expo
+ ↓
+usersStore.toggleSubscription()
+ ↓
+backend subscription endpoint
+ ↓
+subscription succeeds
+ ↓
+createFollowNotification()
+```
+
+Your plan calls this "follow", but because WeUp actually calls the relationship **subscription**, I'd keep the database notification type as:
+
+```text
+follow
+```
+
+while the UI can say:
+
+```text
+John subscribed to you.
 ```
 
 or:
 
-```ts
-profile
+```text
+John followed you.
 ```
 
-then that one line must match your actual store.
-
-If your current `authStore.ts` has:
-
-```ts
-user
-```
-
-leave it exactly as above.
+depending on the product wording you want.
 
 ---
 
-# 9. Create NotificationItem
+# 14. Message → Notification
 
-Run:
+Same principle.
 
-```bash
-mkdir -p components/notifications
-touch components/notifications/NotificationItem.tsx
-```
-
-File:
+Don't create a notification from:
 
 ```text
-frontend-expo/components/notifications/NotificationItem.tsx
+frontend-expo/app/chat/[id].tsx
 ```
 
-## Complete code
+The backend should create it after the message is successfully inserted.
 
-```tsx
-import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import {
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+The flow becomes:
 
-import type { Notification } from "../../types/notification";
-import { useNotificationsStore } from "../../stores/notificationsStore";
-import { styles } from "../../styles/notifications/notifications.styles";
-
-type Props = {
-  notification: Notification;
-  onPress: () => void;
-};
-
-function getIcon(type: string) {
-  switch (type) {
-    case "like":
-      return "heart";
-
-    case "comment":
-      return "chatbubble";
-
-    case "follow":
-      return "person-add";
-
-    case "message":
-      return "chatbubble-ellipses";
-
-    case "system":
-      return "information-circle";
-
-    default:
-      return "notifications";
-  }
-}
-
-function formatTime(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-
-  const diff =
-    Math.max(
-      0,
-      now.getTime() - date.getTime()
-    ) / 1000;
-
-  if (diff < 60) {
-    return "Just now";
-  }
-
-  if (diff < 3600) {
-    return `${Math.floor(diff / 60)}m ago`;
-  }
-
-  if (diff < 86400) {
-    return `${Math.floor(diff / 3600)}h ago`;
-  }
-
-  if (diff < 604800) {
-    return `${Math.floor(diff / 86400)}d ago`;
-  }
-
-  return date.toLocaleDateString();
-}
-
-export default function NotificationItem({
-  notification,
-  onPress,
-}: Props) {
-  const markAsRead =
-    useNotificationsStore(
-      (state) => state.markAsRead
-    );
-
-  const handlePress = async () => {
-    if (!notification.read) {
-      await markAsRead(notification.id);
-    }
-
-    onPress();
-  };
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      style={[
-        styles.notification,
-        !notification.read &&
-          styles.notificationUnread,
-      ]}
-    >
-      <View style={styles.avatar}>
-        <Ionicons
-          name={getIcon(notification.type) as any}
-          size={22}
-          color="#EDEDED"
-        />
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.title}>
-          {notification.title}
-        </Text>
-
-        <Text style={styles.body}>
-          {notification.body}
-        </Text>
-
-        <Text style={styles.timestamp}>
-          {formatTime(
-            notification.created_at
-          )}
-        </Text>
-      </View>
-
-      {!notification.read && (
-        <View style={styles.unreadDot} />
-      )}
-    </Pressable>
-  );
-}
+```text
+User A sends message
+        ↓
+messaging API
+        ↓
+message inserted
+        ↓
+identify recipients
+        ↓
+createMessageNotification()
+        ↓
+notifications
+        ↓
+Realtime
+        ↓
+User B sees badge
 ```
+
+### One important consideration
+
+For messaging, we should **not create a notification every time the conversation list is opened**.
+
+Only:
+
+```text
+actual new message
+```
+
+should generate:
+
+```text
+message notification
+```
+
+And the sender should not receive one.
 
 ---
 
-# 10. Why I'm using an icon instead of avatar for now
-
-Your current backend returns:
-
-```text
-actor_id
-```
-
-but not:
-
-```text
-actor: {
-  id,
-  username,
-  full_name,
-  avatar_url
-}
-```
-
-So we should **not pretend the actor avatar exists yet**.
-
-The icon gives us a working notification UI immediately.
-
-Later we can add actor information to the backend query and replace the icon with:
-
-```text
-[John's avatar] John liked your video
-```
-
-That will be a separate enhancement.
-
----
-
-# 11. Create notification styles
-
-Run:
-
-```bash
-mkdir -p styles/notifications
-touch styles/notifications/notifications.styles.ts
-```
-
-File:
-
-```text
-frontend-expo/styles/notifications/notifications.styles.ts
-```
-
-## Complete code
-
-```ts
-import { StyleSheet } from "react-native";
-
-export const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000000",
-  },
-
-  header: {
-    height: 60,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#222222",
-  },
-
-  backButton: {
-    width: 40,
-    alignItems: "flex-start",
-    justifyContent: "center",
-  },
-
-  headerTitle: {
-    color: "#EDEDED",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-
-  headerSpacer: {
-    width: 40,
-  },
-
-  list: {
-    paddingBottom: 30,
-  },
-
-  notification: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1C1C1C",
-  },
-
-  notificationUnread: {
-    backgroundColor: "#101010",
-  },
-
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#222222",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-
-  content: {
-    flex: 1,
-  },
-
-  title: {
-    color: "#EDEDED",
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 3,
-  },
-
-  body: {
-    color: "#B5B5B5",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  timestamp: {
-    color: "#707070",
-    fontSize: 12,
-    marginTop: 5,
-  },
-
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#EDEDED",
-    marginLeft: 10,
-  },
-
-  centerState: {
-    flex: 1,
-    backgroundColor: "#000000",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 30,
-  },
-
-  stateTitle: {
-    color: "#EDEDED",
-    fontSize: 17,
-    fontWeight: "700",
-    marginTop: 12,
-    textAlign: "center",
-  },
-
-  stateText: {
-    color: "#888888",
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: "center",
-  },
-
-  retryButton: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 11,
-    borderRadius: 8,
-    backgroundColor: "#222222",
-  },
-
-  retryButtonText: {
-    color: "#EDEDED",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  emptyList: {
-    flexGrow: 1,
-  },
-
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 35,
-  },
-
-  emptyTitle: {
-    color: "#EDEDED",
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 14,
-  },
-
-  emptyText: {
-    color: "#777777",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 21,
-    marginTop: 8,
-  },
-});
-```
-
----
-
-# 12. Update AppHeader
-
-Your current:
-
-```text
-frontend-expo/components/layout/AppHeader.tsx
-```
-
-already has the notification icon.
-
-We need to make it functional and add the unread badge.
-
-## Replace your imports
-
-### Current
-
-```tsx
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
-import {
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-
-import { styles } from "../../styles/layout/appHeader.styles";
-```
-
-### Replace with
-
-```tsx
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, {
-  useEffect,
-  useState,
-} from "react";
-import {
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-
-import { styles } from "../../styles/layout/appHeader.styles";
-import { useNotificationsStore } from "../../stores/notificationsStore";
-```
-
----
-
-## Add this inside `AppHeader()`
-
-Immediately after:
-
-```tsx
-const [searchQuery, setSearchQuery] =
-  useState("");
-```
-
-add:
-
-```tsx
-const unreadCount =
-  useNotificationsStore(
-    (state) => state.unreadCount
-  );
-
-const loadUnreadCount =
-  useNotificationsStore(
-    (state) => state.loadUnreadCount
-  );
-
-useEffect(() => {
-  loadUnreadCount();
-}, [loadUnreadCount]);
-```
-
----
-
-# 13. Add notification handler
-
-Inside `AppHeader()` add:
-
-```tsx
-const handleOpenNotifications = () => {
-  console.log(
-    "[HEADER] Opening notifications"
-  );
-
-  router.push("/notifications");
-};
-```
-
----
-
-# 14. Replace the existing notification button
-
-### Current code
-
-```tsx
-<Pressable hitSlop={10}>
-  <Ionicons
-    name="notifications-outline"
-    size={24}
-    color="#EDEDED"
-  />
-</Pressable>
-```
-
-### Replace with
-
-```tsx
-<Pressable
-  onPress={handleOpenNotifications}
-  hitSlop={10}
-  style={{
-    position: "relative",
-  }}
->
-  <Ionicons
-    name="notifications-outline"
-    size={24}
-    color="#EDEDED"
-  />
-
-  {unreadCount > 0 && (
-    <View
-      style={{
-        position: "absolute",
-        top: -7,
-        right: -9,
-        minWidth: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: "#FF3B30",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 3,
-      }}
-    >
-      <Text
-        style={{
-          color: "#FFFFFF",
-          fontSize: 9,
-          fontWeight: "700",
-        }}
-      >
-        {unreadCount > 99
-          ? "99+"
-          : unreadCount}
-      </Text>
-    </View>
-  )}
-</Pressable>
-```
-
-This gives you:
-
-```text
-🔔
-```
-
-when:
-
-```text
-unreadCount = 0
-```
-
-and:
-
-```text
-🔔 3
-```
-
-when:
-
-```text
-unreadCount = 3
-```
-
-and:
-
-```text
-🔔 99+
-```
-
-when it is above 99.
-
----
-
-# 15. One improvement to your Zustand store
-
-Your current `addNotification()` is good.
-
-However, because Realtime can sometimes reconnect, we should make sure the same notification isn't added twice.
+# 15. System notifications
 
 You already have:
 
-```tsx
-const exists =
-  state.notifications.some(
-    (item) =>
-      item.id === notification.id
-  );
+```js
+createSystemNotification()
+```
 
-if (exists) {
-  return state;
+So this is already covered.
+
+For example:
+
+```js
+await createSystemNotification({
+  recipientId: userId,
+  title: "Welcome to WeUp",
+  body: "Your WeUp account is ready.",
+});
+```
+
+No actor is needed.
+
+---
+
+# 16. Fix the GET notifications response
+
+Your original plan says:
+
+```json
+{
+  "notifications": [],
+  "unreadCount": 0
 }
 ```
 
-**Keep that.**
+but your current route returns only:
 
-That protects the UI from duplicate realtime events.
-
----
-
-# 16. Fix `markAsRead()` carefully
-
-There is a subtle issue in your existing store.
-
-You currently do:
-
-```tsx
-notifications:
-  state.notifications.map(
-    (notification) =>
-      notification.id ===
-      notificationId
-        ? {
-            ...notification,
-            read: true,
-          }
-        : notification
-  ),
-unreadCount:
-  state.notifications.find(
-    (notification) =>
-      notification.id ===
-      notificationId
-  )?.read
-    ? state.unreadCount
-    : Math.max(
-        state.unreadCount - 1,
-        0
-      ),
+```json
+{
+  "notifications": []
+}
 ```
 
-This is actually logically okay because it checks the old state before the mapped update.
+Since your Expo app already separately calls:
 
-So **you don't need to replace it right now.**
+```text
+/api/notifications/unread-count
+```
+
+it **works**, but I recommend leaving the two endpoints separate for now.
+
+Don't make an unnecessary API change.
+
+You already have:
+
+```text
+GET /api/notifications
+GET /api/notifications/unread-count
+```
+
+and your Expo service is using both.
 
 ---
 
-# 17. But there is one backend improvement
+# 17. One improvement to your notification service
 
 Your current:
 
-```text
+```js
 markNotificationAsRead()
 ```
 
@@ -1245,462 +905,502 @@ uses:
 
 ```js
 .select()
-.single();
+.single()
 ```
 
-If the notification doesn't belong to the user, Supabase can return an error.
+If the notification ID doesn't belong to the authenticated user, `.single()` can throw.
 
-That's acceptable, but the API currently turns that into:
+That's not necessarily wrong, but your route currently converts that into:
 
 ```text
-500
+500 Failed to mark notification as read
 ```
 
-when it would be better as:
+when it should ideally be:
 
 ```text
-404
+404 Notification not found
 ```
 
-for a notification that doesn't exist for that user.
-
-We can improve this later.
-
-For now, the important security condition is already present:
-
-```js
-.eq("id", notificationId)
-.eq("recipient_id", userId)
-```
-
-So a user cannot mark another user's notification as read.
+We can clean that up after the core integrations are working.
 
 ---
 
-# 18. Check your Expo route
+# 18. Supabase: check Realtime once
 
-Because you created:
+You've already proven Realtime works, so **do not recreate the table**.
 
-```text
-app/notifications/index.tsx
-```
+Your notification table already has the correct structure.
 
-Expo Router should automatically create:
+Make sure `notifications` is included in Supabase Realtime publication.
 
-```text
-/notifications
-```
-
-You do **not** need to manually add it to a route registry.
-
-So:
-
-```tsx
-router.push("/notifications");
-```
-
-should work.
-
----
-
-# 19. Check your Supabase Realtime setup
-
-Your existing:
-
-```text
-frontend-expo/lib/supabase.ts
-```
-
-already has:
-
-```ts
-realtime: {
-  params: {
-    eventsPerSecond: 10,
-  },
-},
-```
-
-So **you don't need to change that file**.
-
-Good.
-
----
-
-# 20. Verify the backend route
-
-Restart backend and use your Expo app while logged in.
-
-The request should now look like:
-
-```text
-GET
-http://localhost:5000/api/notifications/unread-count
-Authorization: Bearer <USER_ACCESS_TOKEN>
-```
-
-You should receive:
-
-```json
-{
-  "unreadCount": 0
-}
-```
-
-or:
-
-```json
-{
-  "unreadCount": 3
-}
-```
-
-instead of:
-
-```json
-{
-  "error": "Unauthorized"
-}
-```
-
----
-
-# 21. How to test with a real notification
-
-The easiest test is to manually insert a notification into Supabase.
-
-First get your logged-in user's UUID.
-
-You can get it from Supabase:
-
-```text
-Authentication
-→ Users
-→ select your user
-→ copy User UID
-```
-
-Then in Supabase SQL Editor:
+Run this in Supabase SQL Editor if you haven't already:
 
 ```sql
-insert into public.notifications (
-  recipient_id,
-  actor_id,
-  type,
-  title,
-  body,
-  reference_id,
-  reference_type,
-  read
-)
-values (
-  'YOUR_USER_UUID',
-  null,
-  'system',
-  'Test notification',
-  'Realtime notifications are working.',
-  null,
-  null,
-  false
-);
+ALTER PUBLICATION supabase_realtime
+ADD TABLE public.notifications;
 ```
 
-Replace:
+If Supabase says the table is already in the publication, **that's fine**. Don't change anything.
 
-```text
-YOUR_USER_UUID
-```
-
-with the actual UUID.
+Your successful realtime test already strongly indicates this is configured correctly.
 
 ---
 
-# 22. What should happen
+# 19. Add a uniqueness protection for subscriptions
 
-With the Expo app open and logged in:
+Because subscriptions should logically be unique, I'd also add this to Supabase:
 
-### Before insert
-
-Header:
-
-```text
-🔔
+```sql
+ALTER TABLE public.subscriptions
+ADD CONSTRAINT subscriptions_subscriber_creator_unique
+UNIQUE (subscriber_id, creator_id);
 ```
 
-Notifications screen:
+**Only run this if that constraint doesn't already exist.**
 
-```text
-No notifications yet
+You can check:
+
+```sql
+SELECT
+  conname
+FROM pg_constraint
+WHERE conrelid = 'public.subscriptions'::regclass;
 ```
 
-Then execute the SQL.
-
-You should immediately see the console:
+This is important because:
 
 ```text
-[REALTIME NOTIFICATIONS] New notification:
+User A → Subscribe to User B
 ```
 
-and the notification should appear in the store.
-
-The header should change from:
+shouldn't be able to create:
 
 ```text
-🔔
+row 1: A → B
+row 2: A → B
+row 3: A → B
 ```
 
-to:
-
-```text
-🔔 1
-```
-
-without refreshing the app.
-
-That confirms:
-
-```text
-Supabase
-   ↓
-Realtime
-   ↓
-realtimeNotifications.ts
-   ↓
-notificationsStore.addNotification()
-   ↓
-Header badge
-```
-
-is working.
+That also makes notification duplication easier to control.
 
 ---
 
-# 23. Test mark-as-read
+# 20. Git Bash commands
 
-Open:
+You don't need to recreate files that already exist.
 
-```text
-/notifications
+For the **new global provider**:
+
+From `frontend-expo`:
+
+```bash
+mkdir -p context
+touch context/NotificationProvider.tsx
 ```
 
-You should see:
+For the backend notification service directory, if it already exists, this does no harm:
 
-```text
-Test notification
-
-Realtime notifications are working.
+```bash
+mkdir -p backend/src/services/notifications
 ```
 
-with an unread indicator.
+For checking your files:
 
-Tap it.
-
-The app should:
-
-1. Call:
-
-```text
-PATCH /api/notifications/{id}/read
+```bash
+find frontend-expo -path "*notification*" -type f
 ```
 
-2. Backend verifies:
+and:
 
-```text
-recipient_id = authenticated user
+```bash
+find backend/src -path "*notification*" -type f
 ```
 
-3. Database changes:
+You should end up with approximately:
 
 ```text
-read: false
-```
-
-to:
-
-```text
-read: true
-```
-
-4. Store changes the notification to read.
-
-5. Unread count goes from:
-
-```text
-1
-```
-
-to:
-
-```text
-0
-```
-
-6. Header badge disappears.
-
----
-
-# 24. Test pull-to-refresh
-
-On the notification screen, pull downward.
-
-You should see the refresh indicator.
-
-It will call:
-
-```text
-GET /api/notifications
+frontend-expo/
+├── app/
+│   ├── _layout.tsx
+│   └── notifications/
+│       └── index.tsx
+│
+├── components/
+│   └── notifications/
+│       └── NotificationItem.tsx
+│
+├── context/
+│   ├── AuthProvider.tsx
+│   └── NotificationProvider.tsx
+│
+├── services/
+│   └── notifications.service.ts
+│
+├── stores/
+│   └── notificationsStore.ts
+│
+├── types/
+│   └── notification.ts
+│
+└── utils/
+    └── realtimeNotifications.ts
 ```
 
 and:
 
 ```text
-GET /api/notifications/unread-count
+backend/
+└── src/
+    ├── middleware/
+    │   └── auth.middleware.js
+    │
+    ├── routes/
+    │   ├── comments/
+    │   │   └── comments.routes.js
+    │   ├── likes/
+    │   │   └── likes.routes.js
+    │   ├── messaging/
+    │   │   └── messaging.routes.js
+    │   └── notifications/
+    │       └── notifications.routes.js
+    │
+    └── services/
+        └── notifications/
+            └── notifications.service.js
 ```
 
 ---
 
-# 25. Test realtime cleanup
+# 21. Restart the backend
 
-This is important.
+After editing the backend:
 
-Open the notification screen.
-
-Your console should show:
-
-```text
-[REALTIME NOTIFICATIONS] Subscribing for user: ...
+```bash
+cd backend
+pnpm dev
 ```
 
-Leave the screen.
+If it's already running under nodemon, it should restart automatically.
+
+Then start Expo:
+
+```bash
+cd ../frontend-expo
+npx expo start -c
+```
+
+The `-c` clears the Metro cache, which is useful after adding the provider.
+
+---
+
+# 22. Test 1 — global realtime
+
+This is the first test.
+
+**Do NOT open `/notifications`.**
+
+Stay on:
+
+```text
+Home
+```
+
+or:
+
+```text
+Creator profile
+```
+
+Then insert a test notification from Supabase:
+
+```sql
+INSERT INTO public.notifications (
+  recipient_id,
+  actor_id,
+  type,
+  title,
+  body,
+  read
+)
+VALUES (
+  'fcf55afc-038f-4a77-a658-5a42214cc646',
+  '0e1e0b54-90d0-4a79-b9bd-efb20365b18c',
+  'system',
+  'Global realtime test',
+  'This notification was received outside the notification screen.',
+  false
+);
+```
 
 You should see:
 
 ```text
-[REALTIME NOTIFICATIONS] Unsubscribing: ...
+[NOTIFICATION PROVIDER] Initializing for: fcf...
+[NOTIFICATION PROVIDER] Subscribing...
+[REALTIME NOTIFICATIONS] Status: SUBSCRIBED
 ```
 
-That confirms:
+Then:
 
-```tsx
-return unsubscribe;
+```text
+[REALTIME NOTIFICATIONS] New notification: {...}
 ```
 
-is working.
+**without visiting `/notifications`.**
+
+That proves Phase 5.8.26 is complete.
 
 ---
 
-# 26. Test duplicate protection
+# 23. Test 2 — Like notification
 
-Insert one notification.
+This is the important one.
 
-You should get:
-
-```text
-1
-```
-
-Do not get:
+Use two accounts:
 
 ```text
-2
+Account A = Uyi Joe
+Account B = utejoe
 ```
 
-for the same database row.
+Suppose Uyi Joe owns a post.
 
-The store's:
+Log in as:
 
-```tsx
-item.id === notification.id
+```text
+utejoe
 ```
 
-check prevents that.
+Like Uyi Joe's post.
+
+Then Uyi Joe should receive:
+
+```text
+New like
+
+utejoe liked your video.
+```
+
+And the database should contain:
+
+```text
+type            = like
+actor_id        = utejoe
+recipient_id    = Uyi Joe
+reference_type  = post
+reference_id    = post ID
+read            = false
+```
+
+You should see the notification arrive **even while Uyi Joe is on Home**.
 
 ---
 
-# 27. Final notification architecture
+# 24. Test 3 — Unlike
 
-After these changes, your project will look like:
-
-```text
-backend
-└── src
-    ├── middleware
-    │   └── auth.middleware.js
-    │
-    ├── routes
-    │   └── notifications
-    │       └── notifications.routes.js
-    │
-    └── services
-        └── notifications
-            └── notifications.service.js
-```
-
-And Expo:
+utejoe:
 
 ```text
-frontend-expo
-├── app
-│   └── notifications
-│       └── index.tsx
-│
-├── components
-│   └── notifications
-│       └── NotificationItem.tsx
-│
-├── services
-│   └── notifications.service.ts
-│
-├── stores
-│   └── notificationsStore.ts
-│
-├── styles
-│   └── notifications
-│       └── notifications.styles.ts
-│
-├── types
-│   └── notification.ts
-│
-└── utils
-    └── realtimeNotifications.ts
+Like
 ```
 
-The overall flow is now:
+→ Uyi gets notification.
+
+Then:
 
 ```text
-                  USER ACTION
-                      │
-          ┌───────────┼───────────┐
-          ↓           ↓           ↓
-        LIKE       COMMENT      FOLLOW
-          │           │           │
-          └───────────┼───────────┘
-                      ↓
-                  BACKEND
-                      ↓
-          createNotification()
-                      ↓
-              Supabase DB
-                      ↓
-            notifications
-                      ↓
-             Supabase Realtime
-                      ↓
-      realtimeNotifications.ts
-                      ↓
-          notificationsStore
-             ↙              ↘
-      Notification UI      Header
-                              ↓
-                         🔔 3
+Unlike
 ```
 
-### One thing I would **not** do yet
+→ **no notification should be generated.**
 
-Don't add push notifications, Expo Notifications, FCM, APNs, device tokens, etc. yet.
+Then:
 
-First get this complete loop working:
+```text
+Like again
+```
 
-**database → realtime → store → screen → badge → mark read.**
+→ a new like notification can be generated.
 
-Once that works, we can move to **Phase 5.8.26+**, including connecting the actual **likes, comments, subscriptions/follows, and messaging backend operations** to `createLikeNotification()`, `createCommentNotification()`, `createFollowNotification()`, and `createMessageNotification()`. That is the point where notifications stop being test records and become a real part of WeUp.
+That's correct because the second like is a new like event.
+
+---
+
+# 25. Test 4 — Comment
+
+utejoe comments on Uyi Joe's post:
+
+```text
+utejoe commented on your video.
+```
+
+Uyi Joe receives it immediately.
+
+Check:
+
+```sql
+SELECT
+  type,
+  actor_id,
+  recipient_id,
+  reference_id,
+  reference_type,
+  body,
+  read
+FROM public.notifications
+ORDER BY created_at DESC
+LIMIT 10;
+```
+
+You should see:
+
+```text
+comment
+```
+
+with:
+
+```text
+reference_type = post
+```
+
+---
+
+# 26. Test 5 — Self-comment
+
+Uyi Joe comments on **his own** post.
+
+Expected:
+
+```text
+Comment created ✅
+Notification created ❌
+```
+
+Same for likes:
+
+```text
+Self-like → no notification
+```
+
+This is important.
+
+---
+
+# 27. Test 6 — Subscribe
+
+Use:
+
+```text
+utejoe
+```
+
+Subscribe to:
+
+```text
+Uyi Joe
+```
+
+Expected Uyi Joe:
+
+```text
+New follower
+
+utejoe followed you.
+```
+
+Database:
+
+```text
+type = follow
+actor_id = utejoe
+recipient_id = Uyi Joe
+reference_type = user
+reference_id = Uyi Joe's ID
+```
+
+---
+
+# 28. Test 7 — Message
+
+utejoe sends Uyi Joe a message.
+
+Expected:
+
+```text
+New message
+
+utejoe sent you a message.
+```
+
+with:
+
+```text
+type = message
+reference_type = conversation
+reference_id = conversation ID
+```
+
+Then Uyi Joe replies.
+
+**utejoe** should get the notification.
+
+The sender should not get their own message notification.
+
+---
+
+# 29. One thing I would NOT implement yet
+
+Don't implement:
+
+```text
+90-day deletion
+```
+
+or:
+
+```text
+cursor pagination
+```
+
+yet.
+
+Your current:
+
+```text
+limit=50
+```
+
+is completely adequate for the first working version.
+
+First make this chain 100% reliable:
+
+```text
+LIKE
+COMMENT
+SUBSCRIBE
+MESSAGE
+   ↓
+notifications table
+   ↓
+Realtime
+   ↓
+global NotificationProvider
+   ↓
+Zustand
+   ↓
+badge
+   ↓
+notification screen
+   ↓
+mark read
+```
+
+Once those four events work, the notification system is genuinely integrated rather than just having a notification UI.
+
+### One remaining piece
+
+I **wouldn't give you a guessed code replacement for the subscription and messaging routes yet**. The files you provided/search results establish that the Expo subscription action goes through `usersStore.toggleSubscription()` and that messaging uses `messagesStore`, but we need the **actual current implementations** of those backend endpoints before inserting notification calls. Guessing those routes could break your existing messaging/subscription logic.
+
+For likes and comments, however, we have the actual route code and the notification integration above is ready to apply.  

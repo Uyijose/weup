@@ -1,6 +1,9 @@
 import express from "express";
 import { supabase } from "../../services/supabase.service.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
+import {
+  createLikeNotification,
+} from "../../services/notifications/notifications.service.js";
 
 const router = express.Router();
 
@@ -38,13 +41,78 @@ router.post("/toggle", requireAuth, async (req, res) => {
     return res.json({ liked: false });
   }
 
-  await supabase.from("likes").insert({
-    user_id: req.user.id,
-    post_id: post_id || null,
-    video_part_id: video_part_id || null,
-  });
+  const { error: likeError } = await supabase
+    .from("likes")
+    .insert({
+      user_id: req.user.id,
+      post_id: post_id || null,
+      video_part_id: video_part_id || null,
+    });
 
-  res.json({ liked: true });
+  if (likeError) {
+    console.error(
+      "[LIKES] INSERT ERROR",
+      likeError
+    );
+
+    return res.status(400).json({
+      error: likeError.message,
+    });
+  }
+
+  /*
+  * Only create a notification for post likes.
+  */
+  if (post_id) {
+    const { data: post, error: postError } =
+      await supabase
+        .from("posts")
+        .select("id,user_id")
+        .eq("id", post_id)
+        .single();
+
+    if (postError) {
+      console.error(
+        "[LIKES] FAILED TO FETCH POST OWNER",
+        postError
+      );
+    } else if (post?.user_id) {
+      let actorName = "Someone";
+
+      const { data: actor } = await supabase
+        .from("users")
+        .select("username,full_name")
+        .eq("id", req.user.id)
+        .maybeSingle();
+
+      actorName =
+        actor?.full_name ||
+        actor?.username ||
+        "Someone";
+
+      try {
+        await createLikeNotification({
+          recipientId: post.user_id,
+          actorId: req.user.id,
+          postId: post.id,
+          actorName,
+        });
+      } catch (notificationError) {
+        /*
+        * Do not make a successful like fail
+        * just because notification creation failed.
+        */
+        console.error(
+          "[LIKES] NOTIFICATION ERROR",
+          notificationError
+        );
+      }
+    }
+  }
+
+  return res.json({
+    liked: true,
+  });
 });
 
 export default router;

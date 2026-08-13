@@ -44,16 +44,16 @@ export default function NotificationsScreen() {
     loadData();
   }, [loadData]);
 
-  useEffect(() => {
-    if (!user?.id) {
-      return;
-    }
+  // useEffect(() => {
+  //   if (!user?.id) {
+  //     return;
+  //   }
 
-    const unsubscribe =
-      subscribeToNotifications(user.id);
+  //   const unsubscribe =
+  //     subscribeToNotifications(user.id);
 
-    return unsubscribe;
-  }, [user?.id]);
+  //   return unsubscribe;
+  // }, [user?.id]);
 
   const handleNotificationPress = (
     notification: {

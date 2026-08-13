@@ -1345,7 +1345,7 @@ Do not notify if:
 actor_id === recipient_id
 ```
 
-### Follow
+### Follow  (this should be subscribe)
 
 Notify followed user.
 

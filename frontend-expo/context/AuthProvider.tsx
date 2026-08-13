@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
-
+import NotificationProvider from "./NotificationProvider";
 import { useAuthStore } from "../stores/authStore";
 
 interface Props {
@@ -43,5 +43,9 @@ export default function AuthProvider({ children }: Props) {
     }
   }, [user, loading, segments]);
 
-  return <>{children}</>;
+  return (
+    <NotificationProvider>
+      {children}
+    </NotificationProvider>
+  );
 }
