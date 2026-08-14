@@ -28,45 +28,77 @@ export const useCommentsStore =
 
     const keyId = videoPartId ?? postId;
 
-    const column = videoPartId ? "video_part_id" : "post_id";
+    if (!keyId) {
+      console.log("[COMMENTS FETCH] Missing post/video ID");
+      return [];
+    }
+
+    const column = videoPartId
+      ? "video_part_id"
+      : "post_id";
+
     const value = videoPartId ?? postId;
 
     console.log("[COMMENTS FETCH]", {
       keyId,
       column,
-      value
+      value,
+      hasToken: !!token,
     });
 
-    const { data } = await api.get(
-    `/api/comments?${column}=${value}`,
-    {
-      headers: {
-        Authorization: token
-          ? `Bearer ${token}`
-          : "",
-      },
-    }
-  );
+    try {
+      const response = await api.get(
+        `/api/comments?${column}=${encodeURIComponent(value)}`,
+        {
+          headers: {
+            Authorization: token
+              ? `Bearer ${token}`
+              : "",
+          },
+        }
+      );
 
-  console.log("[COMMENTS RESPONSE]", {
-    keyId,
-    count: Array.isArray(data)
-      ? data.length
-      : 0,
-  });
+      const data = response.data;
 
-  set((state: CommentsStore) => ({
-    commentsMap: {
-      ...state.commentsMap,
-      [keyId]: Array.isArray(data)
+      console.log("[COMMENTS RESPONSE]", {
+        keyId,
+        status: response.status,
+        count: Array.isArray(data)
+          ? data.length
+          : 0,
+      });
+
+      set((state: CommentsStore) => ({
+        commentsMap: {
+          ...state.commentsMap,
+          [keyId]: Array.isArray(data)
+            ? data
+            : [],
+        },
+      }));
+
+      return Array.isArray(data)
         ? data
-        : [],
-    },
-  }));
+        : [];
+    } catch (error: any) {
+      console.log("[COMMENTS FETCH ERROR]", {
+        keyId,
+        column,
+        value,
+        status: error?.response?.status,
+        response: error?.response?.data,
+        message: error?.message,
+      });
 
-  return Array.isArray(data)
-    ? data
-    : [];
+      set((state: CommentsStore) => ({
+        commentsMap: {
+          ...state.commentsMap,
+          [keyId]: [],
+        },
+      }));
+
+      return [];
+    }
   },
 
   addComment: (

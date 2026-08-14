@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-08-14T01:31:54.906Z",
+  "test": {
+    "actor": "Utejoe",
+    "actorId": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43",
+    "recipient": "Uyi Joe",
+    "recipientId": "fcf55afc-038f-4a77-a658-5a42214cc646",
+    "postId": "9c7bbea1-8e50-4865-b06a-118cdcd4ebcb"
+  },
+  "steps": {
+    "postFetch": {
+      "success": true,
+      "post": {
+        "id": "9c7bbea1-8e50-4865-b06a-118cdcd4ebcb",
+        "user_id": "fcf55afc-038f-4a77-a658-5a42214cc646"
+      }
+    },
+    "ownerCheck": {
+      "success": true,
+      "expected": "fcf55afc-038f-4a77-a658-5a42214cc646",
+      "actual": "fcf55afc-038f-4a77-a658-5a42214cc646"
+    },
+    "actorFetch": {
+      "success": true,
+      "actor": {
+        "id": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43",
+        "username": "cyce9485",
+        "full_name": "Cyber Space",
+        "avatar_url": "https://pub-73e817b73240480ca13a2d454f43e1c0.r2.dev/uploads/875f9e1061632e716daece01c9d38c.jpg"
+      }
+    },
+    "likeInsert": {
+      "success": true,
+      "alreadyExisted": false,
+      "like": {
+        "id": "924549dd-ac24-4672-928d-57425aabae4f",
+        "created_at": "2026-08-14T01:32:00.142543+00:00",
+        "post_id": "9c7bbea1-8e50-4865-b06a-118cdcd4ebcb",
+        "user_id": "7fe21bc8-5be5-40f1-9f36-8e2436b7bd43",
+        "comment_id": null,
+        "video_part_id": null
+      }
+    }
+  },
+  "success": false,
+  "error": {
+    "message": "new row violates row-level security policy for table \"notifications\"",
+    "details": {
+      "code": "42501",
+      "details": null,
+      "hint": null,
+      "message": "new row violates row-level security policy for table \"notifications\""
+    }
+  }
+}

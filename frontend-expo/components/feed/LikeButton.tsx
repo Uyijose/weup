@@ -1,6 +1,5 @@
 import React, {
   useEffect,
-  useState,
 } from "react";
 
 import {
@@ -11,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import { ViewerPost } from "../../types/post";
-
+import { useLikesStore } from "../../stores/likesStore";
 import { likeButtonStyles } from "../../styles/feed/likeButton.styles";
 
 type LikeButtonProps = {
@@ -25,32 +24,85 @@ export default function LikeButton({
   post,
   onPress,
 }: LikeButtonProps) {
-  const [liked, setLiked] =
-    useState(false);
-
-  const [count, setCount] =
-    useState(post.likes_count);
-
-  useEffect(() => {
-    setCount(post.likes_count);
-  }, [post.likes_count]);
-
-  function toggleLike() {
-    const next = !liked;
-
-    setLiked(next);
-
-    setCount((value) =>
-      next ? value + 1 : Math.max(0, value - 1)
+  const likeState =
+    useLikesStore(
+      (state) => state.likesMap[post.id]
     );
 
-    onPress?.(next);
-  }
+  const fetchLikeState =
+    useLikesStore(
+      (state) => state.fetchLikeState
+    );
+
+  const toggleLike =
+    useLikesStore(
+      (state) => state.toggleLike
+    );
+
+  const liked =
+    likeState?.hasLiked ?? false;
+
+  useEffect(() => {
+    console.log(
+      "[LIKE BUTTON] Loading like state",
+      post.id
+    );
+
+    fetchLikeState(
+      post.id,
+      false
+    );
+  }, [
+    post.id,
+    fetchLikeState,
+  ]);
+
+  const handleLike = async () => {
+    console.log(
+      "[LIKE BUTTON] Pressed",
+      {
+        postId: post.id,
+        currentlyLiked: liked,
+      }
+    );
+
+    try {
+      const response =
+        await toggleLike(
+          post.id,
+          false
+        );
+
+      console.log(
+        "[LIKE BUTTON] Backend response",
+        response
+      );
+
+      if (response?.liked !== undefined) {
+        onPress?.(
+          response.liked
+        );
+      }
+    } catch (error: any) {
+      console.error(
+        "[LIKE BUTTON] ERROR",
+        {
+          message: error?.message,
+          response:
+            error?.response?.data,
+          status:
+            error?.response?.status,
+        }
+      );
+    }
+  };
 
   return (
     <Pressable
-      style={likeButtonStyles.container}
-      onPress={toggleLike}
+      style={
+        likeButtonStyles.container
+      }
+      onPress={handleLike}
     >
       <Ionicons
         name={
@@ -66,8 +118,12 @@ export default function LikeButton({
         }
       />
 
-      <Text style={likeButtonStyles.text}>
-        {count.toLocaleString()}
+      <Text
+        style={
+          likeButtonStyles.text
+        }
+      >
+        {post.likes_count.toLocaleString()}
       </Text>
     </Pressable>
   );

@@ -1,315 +1,322 @@
-Yes. The **realtime system itself is working**. Your test notification proves:
+Yes. The notification system itself is working — your manual Supabase notification proved that:
 
-```text
-Supabase INSERT
-→ Realtime
-→ NotificationProvider
-→ notificationsStore
-→ UI
-```
+**Supabase INSERT → Realtime → NotificationProvider → notificationsStore → UI**
 
-The problem is specifically in how **likes/comments create the database notification**.
+The problem is now specifically **backend like → notification creation**.
 
-## 1. What is causing the problem?
+## 1. What is causing the like notification problem?
 
-### Comment — definite bug
+There are **two problems in the current backend code**.
 
-Your `comments.routes.js` currently tries to create the notification inside:
+### Problem 1 — `notifications.service.js` is using the wrong Supabase client
+
+You currently have:
+
+**`backend/src/lib/supabase.js`**
 
 ```js
-router.get("/")
+import { createClient } from "@supabase/supabase-js";
+
+export const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 ```
 
-That is the **GET comments** endpoint.
-
-Worse, this condition is wrong:
+But your notification service imports this:
 
 ```js
-if (post_id && data?.user_id)
+import { supabase } from "../../lib/supabase.js";
 ```
 
-because `data` from:
+That means notification creation is using the **anon key**.
+
+Your backend authentication middleware correctly uses:
 
 ```js
-const { data, error } = await supabase
-  .from("comments")
-  ...
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
-is an **array of comments**, not a single comment.
+For server-side notification creation, we should use a server/admin Supabase client with the service-role key.
 
-So:
-
-```js
-data?.user_id
-```
-
-will be `undefined`.
-
-Therefore the notification code never runs.
-
-The notification must be created in:
-
-```text
-POST /api/comments
-```
-
-**after the comment has successfully been inserted.**
+This is especially important if RLS is enabled on `notifications`.
 
 ---
 
-### Like
+### Problem 2 — Your duplicate check prevents a future like notification
 
-Your like notification code is in the correct general location: after a successful like insertion.
+You currently have this inside `createNotification()`:
 
-However, we need to add logging around every step so we can see exactly where it fails.
+```js
+.eq("recipient_id", recipientId)
+.eq("actor_id", actorId)
+.eq("type", type)
+.eq("reference_id", referenceId)
+.eq("reference_type", referenceType)
+```
+
+For example:
+
+Utejoe likes Uyi Joe's post:
+
+```text
+utejoe
+↓
+likes
+↓
+Uyi Joe's post
+↓
+notification
+```
+
+That notification remains in the database.
+
+If Utejoe unlikes and then likes again, your code sees the **old notification** and returns it instead of creating a new notification.
+
+So this duplicate strategy is not appropriate for likes.
 
 ---
 
-# 2. Fix comments first
+# 2. Fix the Supabase client first
+
+## File to CREATE
+
+Create:
+
+```text
+backend/src/lib/supabaseAdmin.js
+```
+
+### Git Bash command
+
+From your project root:
+
+```bash
+touch backend/src/lib/supabaseAdmin.js
+```
+
+Put this entire code inside it:
+
+```js
+import { createClient } from "@supabase/supabase-js";
+
+export const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+console.log(
+  "[SUPABASE ADMIN] Initialized:",
+  !!process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+```
+
+---
+
+# 3. Change the notification service to use the admin client
 
 ## File
 
 ```text
-backend/src/routes/comments/comments.routes.js
+backend/src/services/notifications/notifications.service.js
 ```
 
-### DELETE this entire block from `router.get("/")`
+### OLD CODE
 
-Find:
+At the very top you currently have:
 
 ```js
-/*
-* Notify the post owner.
-*/
-if (post_id && data?.user_id) {
-  const { data: post, error: postError } =
-    await supabase
-      .from("posts")
-      .select("id,user_id")
-      .eq("id", post_id)
-      .single();
-
-  if (postError) {
-    console.error(
-      "[COMMENTS] FAILED TO FETCH POST OWNER",
-      postError
-    );
-  } else if (post?.user_id) {
-    const { data: actor } = await supabase
-      .from("users")
-      .select("username,full_name")
-      .eq("id", req.user.id)
-      .maybeSingle();
-
-    const actorName =
-      actor?.full_name ||
-      actor?.username ||
-      "Someone";
-
-    try {
-      await createCommentNotification({
-        recipientId: post.user_id,
-        actorId: req.user.id,
-        postId: post.id,
-        actorName,
-      });
-    } catch (notificationError) {
-      console.error(
-        "[COMMENTS] NOTIFICATION ERROR",
-        notificationError
-      );
-    }
-  }
-}
+import { supabase } from "../../lib/supabase.js";
 ```
 
-**Delete it completely.**
+### REPLACE WITH
 
-Your `GET /api/comments` should only fetch comments.
+```js
+import { supabaseAdmin } from "../../lib/supabaseAdmin.js";
+```
 
 ---
 
-# 3. Add the comment notification to POST
+# 4. Replace `createNotification()`
 
-Still in:
+There is another important change here.
 
-```text
-backend/src/routes/comments/comments.routes.js
-```
+Your current duplicate-checking system is too aggressive for likes.
 
-Find this existing code:
+### OLD CODE
 
-```js
-if (error) return res.status(400).json({ error: error.message });
-
-res.json(data);
-```
-
-### Replace it with:
+Replace your **entire `createNotification()` function**, from:
 
 ```js
-if (error) {
-  console.error(
-    "[COMMENTS] INSERT ERROR",
-    error
-  );
+export async function createNotification({
+```
 
-  return res.status(400).json({
-    error: error.message,
-  });
+through its closing:
+
+```js
+  return data;
 }
+```
 
-console.log(
-  "[COMMENTS] COMMENT CREATED",
-  {
-    commentId: data.id,
-    postId: data.post_id,
-    actorId: req.user.id,
-  }
-);
+with this:
 
-if (data.post_id) {
+```js
+export async function createNotification({
+  recipientId,
+  actorId = null,
+  type,
+  title,
+  body,
+  referenceId = null,
+  referenceType = null,
+}) {
   console.log(
-    "[COMMENTS] FETCHING POST OWNER",
-    data.post_id
+    "[NOTIFICATION] CREATE REQUEST",
+    {
+      recipientId,
+      actorId,
+      type,
+      title,
+      referenceId,
+      referenceType,
+    }
   );
 
-  const { data: post, error: postError } =
-    await supabase
-      .from("posts")
-      .select("id,user_id")
-      .eq("id", data.post_id)
-      .single();
-
-  if (postError) {
-    console.error(
-      "[COMMENTS] FAILED TO FETCH POST OWNER",
-      postError
-    );
-  } else {
-    console.log(
-      "[COMMENTS] POST OWNER FOUND",
-      post
-    );
-
-    if (post?.user_id) {
-      const { data: actor, error: actorError } =
-        await supabase
-          .from("users")
-          .select("username,full_name")
-          .eq("id", req.user.id)
-          .maybeSingle();
-
-      if (actorError) {
-        console.error(
-          "[COMMENTS] FAILED TO FETCH ACTOR",
-          actorError
-        );
-      }
-
-      const actorName =
-        actor?.full_name ||
-        actor?.username ||
-        "Someone";
-
-      console.log(
-        "[COMMENTS] CREATING NOTIFICATION",
-        {
-          recipientId: post.user_id,
-          actorId: req.user.id,
-          postId: post.id,
-          actorName,
-        }
-      );
-
-      try {
-        const notification =
-          await createCommentNotification({
-            recipientId: post.user_id,
-            actorId: req.user.id,
-            postId: post.id,
-            actorName,
-          });
-
-        console.log(
-          "[COMMENTS] NOTIFICATION CREATED",
-          notification
-        );
-      } catch (notificationError) {
-        console.error(
-          "[COMMENTS] NOTIFICATION ERROR",
-          notificationError
-        );
-      }
-    } else {
-      console.log(
-        "[COMMENTS] POST HAS NO OWNER",
-        post
-      );
-    }
+  if (!recipientId) {
+    throw new Error("Notification recipient is required");
   }
+
+  if (!type) {
+    throw new Error("Notification type is required");
+  }
+
+  if (!title) {
+    throw new Error("Notification title is required");
+  }
+
+  if (!body) {
+    throw new Error("Notification body is required");
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("notifications")
+    .insert({
+      recipient_id: recipientId,
+      actor_id: actorId,
+      type,
+      title,
+      body,
+      reference_id: referenceId,
+      reference_type: referenceType,
+      read: false,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error(
+      "[NOTIFICATION] CREATE ERROR",
+      error
+    );
+
+    throw error;
+  }
+
+  console.log(
+    "[NOTIFICATION] CREATED SUCCESSFULLY",
+    data
+  );
+
+  return data;
 }
-
-return res.json(data);
 ```
 
-### Important
+### Why are we removing the duplicate check?
 
-This goes **inside `router.post("/")`**, immediately after:
+Because your database already prevents duplicate **likes** through the likes relationship.
 
-```js
-if (error) {
-   ...
-}
-```
+The notification should represent an event.
 
-and before:
-
-```js
-return res.json(data);
-```
-
----
-
-# 4. Your corrected comments route structure
-
-After the changes, the important structure should be:
+For example:
 
 ```text
-GET /api/comments
-    ↓
-Fetch comments
-    ↓
-Return comments
+Like
+→ notification
 
+Unlike
+→ no notification
 
-POST /api/comments
-    ↓
-Insert comment
-    ↓
-Find post owner
-    ↓
-Find actor name
-    ↓
-createCommentNotification()
-    ↓
-notifications table
-    ↓
-Supabase Realtime
-    ↓
-Expo
+Like again
+→ new notification
 ```
 
-That is the correct flow.
+We don't want the first notification to permanently block future legitimate likes.
+
+For comments, each comment should also be capable of generating its own notification.
 
 ---
 
-# 5. Fix/test likes
+# 5. Change all notification database operations to `supabaseAdmin`
 
-Your likes implementation is structurally correct.
+Because we changed the import from:
 
-But let's add logging so we can see exactly what happens.
+```js
+supabase
+```
+
+to:
+
+```js
+supabaseAdmin
+```
+
+you must change the remaining notification-service references.
+
+## File
+
+```text
+backend/src/services/notifications/notifications.service.js
+```
+
+Use Find & Replace.
+
+### OLD
+
+```js
+supabase
+```
+
+### NEW
+
+```js
+supabaseAdmin
+```
+
+So for example:
+
+### OLD
+
+```js
+const { data, error } = await supabase
+  .from("notifications")
+```
+
+### NEW
+
+```js
+const { data, error } = await supabaseAdmin
+  .from("notifications")
+```
+
+Do this **only in `notifications.service.js`**.
+
+Do not globally replace `supabase` throughout your entire backend.
+
+---
+
+# 6. Add logs to the like route
+
+Now we want to know exactly how far the like notification process gets.
 
 ## File
 
@@ -317,89 +324,40 @@ But let's add logging so we can see exactly what happens.
 backend/src/routes/likes/likes.routes.js
 ```
 
-Find:
+Find this section:
 
 ```js
-const { error: likeError } = await supabase
-  .from("likes")
-  .insert({
-    user_id: req.user.id,
-    post_id: post_id || null,
-    video_part_id: video_part_id || null,
-  });
-```
-
-Replace it with:
-
-```js
-console.log(
-  "[LIKES] CREATING LIKE",
-  {
-    actorId: req.user.id,
-    postId: post_id,
-    videoPartId: video_part_id,
-  }
-);
-
-const { error: likeError } = await supabase
-  .from("likes")
-  .insert({
-    user_id: req.user.id,
-    post_id: post_id || null,
-    video_part_id: video_part_id || null,
-  });
-```
-
-Then find:
-
-```js
-if (likeError) {
-  console.error(
-    "[LIKES] INSERT ERROR",
-    likeError
-  );
-
-  return res.status(400).json({
-    error: likeError.message,
-  });
-}
-```
-
-Replace it with:
-
-```js
-if (likeError) {
-  console.error(
-    "[LIKES] INSERT ERROR",
-    likeError
-  );
-
-  return res.status(400).json({
-    error: likeError.message,
-  });
-}
-
-console.log(
-  "[LIKES] LIKE CREATED",
-  {
-    actorId: req.user.id,
-    postId: post_id,
-    videoPartId: video_part_id,
-  }
-);
-```
-
----
-
-# 6. Replace the like notification block
-
-Now find this entire block:
-
-```js
-/*
-* Only create a notification for post likes.
-*/
 if (post_id) {
+```
+
+### Replace the entire current block
+
+From:
+
+```js
+if (post_id) {
+```
+
+through the matching closing `}` immediately before:
+
+```js
+return res.json({
+  liked: true,
+});
+```
+
+with:
+
+```js
+if (post_id) {
+  console.log(
+    "[LIKES] LIKE CREATED - STARTING NOTIFICATION",
+    {
+      postId: post_id,
+      actorId: req.user.id,
+    }
+  );
+
   const { data: post, error: postError } =
     await supabase
       .from("posts")
@@ -407,37 +365,85 @@ if (post_id) {
       .eq("id", post_id)
       .single();
 
+  console.log(
+    "[LIKES] POST OWNER RESULT",
+    {
+      post,
+      error: postError,
+    }
+  );
+
   if (postError) {
     console.error(
       "[LIKES] FAILED TO FETCH POST OWNER",
       postError
     );
-  } else if (post?.user_id) {
+  } else if (!post?.user_id) {
+    console.log(
+      "[LIKES] POST OWNER NOT FOUND",
+      {
+        postId: post_id,
+      }
+    );
+  } else if (post.user_id === req.user.id) {
+    console.log(
+      "[LIKES] USER LIKED THEIR OWN POST - NO NOTIFICATION"
+    );
+  } else {
+    console.log(
+      "[LIKES] NOTIFICATION RECIPIENT",
+      {
+        recipientId: post.user_id,
+        actorId: req.user.id,
+      }
+    );
+
     let actorName = "Someone";
 
-    const { data: actor } = await supabase
-      .from("users")
-      .select("username,full_name")
-      .eq("id", req.user.id)
-      .maybeSingle();
+    const { data: actor, error: actorError } =
+      await supabase
+        .from("users")
+        .select("username,full_name")
+        .eq("id", req.user.id)
+        .maybeSingle();
+
+    console.log(
+      "[LIKES] ACTOR RESULT",
+      {
+        actor,
+        error: actorError,
+      }
+    );
 
     actorName =
       actor?.full_name ||
       actor?.username ||
       "Someone";
 
-    try {
-      await createLikeNotification({
+    console.log(
+      "[LIKES] CREATING LIKE NOTIFICATION",
+      {
         recipientId: post.user_id,
         actorId: req.user.id,
         postId: post.id,
         actorName,
-      });
+      }
+    );
+
+    try {
+      const notification =
+        await createLikeNotification({
+          recipientId: post.user_id,
+          actorId: req.user.id,
+          postId: post.id,
+          actorName,
+        });
+
+      console.log(
+        "[LIKES] LIKE NOTIFICATION CREATED",
+        notification
+      );
     } catch (notificationError) {
-      /*
-      * Do not make a successful like fail
-      * just because notification creation failed.
-      */
       console.error(
         "[LIKES] NOTIFICATION ERROR",
         notificationError
@@ -447,291 +453,248 @@ if (post_id) {
 }
 ```
 
-### Replace it with:
-
-```js
-if (post_id) {
-  console.log(
-    "[LIKES] FETCHING POST OWNER",
-    post_id
-  );
-
-  const { data: post, error: postError } =
-    await supabase
-      .from("posts")
-      .select("id,user_id")
-      .eq("id", post_id)
-      .single();
-
-  if (postError) {
-    console.error(
-      "[LIKES] FAILED TO FETCH POST OWNER",
-      postError
-    );
-  } else {
-    console.log(
-      "[LIKES] POST OWNER FOUND",
-      post
-    );
-
-    if (post?.user_id) {
-      const { data: actor, error: actorError } =
-        await supabase
-          .from("users")
-          .select("username,full_name")
-          .eq("id", req.user.id)
-          .maybeSingle();
-
-      if (actorError) {
-        console.error(
-          "[LIKES] FAILED TO FETCH ACTOR",
-          actorError
-        );
-      }
-
-      const actorName =
-        actor?.full_name ||
-        actor?.username ||
-        "Someone";
-
-      console.log(
-        "[LIKES] CREATING NOTIFICATION",
-        {
-          recipientId: post.user_id,
-          actorId: req.user.id,
-          postId: post.id,
-          actorName,
-        }
-      );
-
-      try {
-        const notification =
-          await createLikeNotification({
-            recipientId: post.user_id,
-            actorId: req.user.id,
-            postId: post.id,
-            actorName,
-          });
-
-        console.log(
-          "[LIKES] NOTIFICATION CREATED",
-          notification
-        );
-      } catch (notificationError) {
-        console.error(
-          "[LIKES] NOTIFICATION ERROR",
-          notificationError
-        );
-      }
-    } else {
-      console.log(
-        "[LIKES] POST HAS NO OWNER",
-        post
-      );
-    }
-  }
-}
-```
-
-I deliberately removed the comments from the code as requested and replaced them with `console.log()` diagnostics.
+This is important because now the backend terminal will tell us exactly where it stops.
 
 ---
 
-# 7. One more important issue: your comment GET route
+# 7. One more important thing: verify your post owner
 
-Your current:
-
-```js
-router.get("/", async (req, res) => {
-```
-
-does **not** use:
+Your notification recipient is:
 
 ```js
-requireAuth
+post.user_id
 ```
 
-but your code doesn't actually need authentication just to read public comments.
-
-That's fine if comments are intentionally public.
-
-The important thing is that the notification creation **must not be there**.
-
----
-
-# 8. Check the notification service
-
-Your current:
+So if:
 
 ```text
-backend/src/services/notifications/notifications.service.js
+Utejoe likes Uyi Joe's post
 ```
 
-already has:
+the database must have:
 
-```js
-export async function createCommentNotification({
-  recipientId,
-  actorId,
-  postId,
-  actorName = "Someone",
-})
+```text
+posts.user_id = Uyi Joe's UUID
 ```
 
-and:
+In your case:
 
-```js
-return createNotification({
-  recipientId,
-  actorId,
-  type: "comment",
-  title: "New comment",
-  body: `${actorName} commented on your video.`,
-  referenceId: postId,
-  referenceType: "post",
-});
+```text
+Utejoe
+0e1e0b54-90d0-4a79-b9bd-efb20365b18c
 ```
 
-So **do not change that part**.
-
-Likewise, your:
-
-```js
-createLikeNotification()
+```text
+Uyi Joe
+fcf55afc-038f-4a77-a658-5a42214cc646
 ```
 
-is already correct.
+Run this in Supabase SQL Editor for the post you're testing:
+
+```sql
+SELECT
+  id,
+  user_id
+FROM public.posts
+WHERE id = 'YOUR_POST_ID';
+```
+
+You should see:
+
+```text
+user_id
+fcf55afc-038f-4a77-a658-5a42214cc646
+```
+
+If it shows Utejoe's ID instead, then the backend is correctly notifying the **owner recorded in the post**, not necessarily the person you're expecting.
 
 ---
 
-# 9. Restart the backend
+# 8. Your `notifications.routes.js` does NOT need changing
 
-After saving the changes, restart your backend.
+This is already fine:
 
-From Git Bash, depending on how you normally start it:
+```text
+backend/src/routes/notifications/notifications.routes.js
+```
+
+Don't change it.
+
+---
+
+# 9. Your Expo notification files do NOT need changing
+
+These are already working:
+
+```text
+frontend-expo/stores/notificationsStore.ts
+frontend-expo/services/notifications.service.ts
+```
+
+Your realtime system has already proven that it receives a row inserted into:
+
+```text
+public.notifications
+```
+
+So the frontend is not the current problem.
+
+The pipeline is currently:
+
+```text
+LIKE BUTTON
+    ↓
+likesStore
+    ↓
+POST /api/likes/toggle
+    ↓
+likes.routes.js
+    ↓
+createLikeNotification()
+    ↓
+notifications.service.js
+    ↓
+public.notifications
+    ↓
+Supabase Realtime
+    ↓
+Expo NotificationProvider
+    ↓
+notificationsStore
+```
+
+We need to fix the section in bold:
+
+```text
+likes.routes.js
+       ↓
+createLikeNotification()
+       ↓
+notifications.service.js
+       ↓
+public.notifications
+```
+
+---
+
+# 10. Restart the backend
+
+After making these changes, restart your backend.
+
+If you're running it manually:
 
 ```bash
 cd backend
 npm run dev
 ```
 
-If the backend is already running with nodemon, it should restart automatically.
+If it's already running, stop it with:
+
+```text
+Ctrl + C
+```
+
+then:
+
+```bash
+npm run dev
+```
+
+If your backend is deployed on Render, commit and push:
+
+```bash
+git add backend/src/lib/supabaseAdmin.js
+git add backend/src/services/notifications/notifications.service.js
+git add backend/src/routes/likes/likes.routes.js
+git commit -m "fix like notifications"
+git push
+```
+
+Then wait for the Render deployment to finish.
 
 ---
 
-# 10. Test LIKE
+# 11. Test it correctly
 
-You need **two users**.
+Use **two accounts**.
 
-For example:
-
-```text
-Uyi Joe
-    owns Post A
-
-Utejoe
-    likes Post A
-```
-
-Make sure Uyi Joe is **not** the person liking the post.
-
-When Utejoe likes Uyi Joe's post, backend should show:
+### Account A — Uyi Joe
 
 ```text
-[LIKES] CREATING LIKE
+fcf55afc-038f-4a77-a658-5a42214cc646
 ```
 
-then:
+Keep Uyi Joe's Expo app open.
+
+Make sure the global notification provider is running.
+
+You should already see:
 
 ```text
-[LIKES] LIKE CREATED
+[NOTIFICATION PROVIDER] Subscribing...
+[REALTIME NOTIFICATIONS] Status: SUBSCRIBED
 ```
 
-then:
+### Account B — Utejoe
 
 ```text
-[LIKES] FETCHING POST OWNER
+0e1e0b54-90d0-4a79-b9bd-efb20365b18c
 ```
 
-then:
+Use Utejoe to like a post **owned by Uyi Joe**.
+
+---
+
+# 12. What you should see in the backend terminal
+
+When Utejoe likes Uyi Joe's post, you should see something similar to:
 
 ```text
-[LIKES] POST OWNER FOUND
-```
-
-then:
-
-```text
-[LIKES] CREATING NOTIFICATION
-```
-
-then:
-
-```text
-[LIKES] NOTIFICATION CREATED
-```
-
-And on Uyi Joe's Expo terminal:
-
-```text
-[REALTIME NOTIFICATIONS] New notification:
-```
-
-You should then see something like:
-
-```json
-{
-  "type": "like",
-  "title": "New like",
-  "body": "utejoe liked your video."
+[LIKES] LIKE CREATED - STARTING NOTIFICATION {
+  postId: "...",
+  actorId: "0e1e0b54-90d0-4a77-bd..."
 }
 ```
 
----
-
-# 11. Test COMMENT
-
-Again:
+Then:
 
 ```text
-Uyi Joe
-    owns Post A
-
-Utejoe
-    comments on Post A
+[LIKES] POST OWNER RESULT {
+  post: {
+    id: "...",
+    user_id: "fcf55afc-038f-4a77-a658-5a42214cc646"
+  }
+}
 ```
 
-When Utejoe submits the comment, backend should show:
+Then:
 
 ```text
-[COMMENTS] COMMENT CREATED
+[LIKES] NOTIFICATION RECIPIENT {
+  recipientId: "fcf55afc-038f-4a77-a658-5a42214cc646",
+  actorId: "0e1e0b54-90d0-4a79-b9bd-efb20365b18c"
+}
 ```
 
-then:
+Then:
 
 ```text
-[COMMENTS] FETCHING POST OWNER
+[LIKES] CREATING LIKE NOTIFICATION
 ```
 
-then:
+Then:
 
 ```text
-[COMMENTS] POST OWNER FOUND
+[NOTIFICATION] CREATE REQUEST
 ```
 
-then:
+Then:
 
 ```text
-[COMMENTS] CREATING NOTIFICATION
+[NOTIFICATION] CREATED SUCCESSFULLY
 ```
 
-then:
-
-```text
-[COMMENTS] NOTIFICATION CREATED
-```
-
-And Uyi Joe should immediately receive:
+And finally on Uyi Joe's Expo terminal:
 
 ```text
 [REALTIME NOTIFICATIONS] New notification:
@@ -741,121 +704,74 @@ with:
 
 ```json
 {
-  "type": "comment",
-  "title": "New comment",
-  "reference_type": "post"
+  "type": "like",
+  "recipient_id": "fcf55afc-038f-4a77-a658-5a42214cc646",
+  "actor_id": "0e1e0b54-90d0-4a79-b9bd-efb20365b18c"
 }
 ```
 
----
-
-# 12. If it still doesn't work
-
-The logs will tell us exactly where.
-
-### If you see:
-
-```text
-[LIKES] LIKE CREATED
-```
-
-but **not**:
-
-```text
-[LIKES] FETCHING POST OWNER
-```
-
-then `post_id` isn't being sent.
+Then the notification should appear immediately.
 
 ---
 
-### If you see:
+## 13. If it still doesn't work
+
+The **most important terminal log** will be the first one that fails.
+
+For example, if you get:
 
 ```text
 [LIKES] FAILED TO FETCH POST OWNER
 ```
 
-then we have a `posts` table/ownership problem.
+then the problem is the post lookup.
 
-Send me that exact error.
-
----
-
-### If you see:
+If you get:
 
 ```text
-[LIKES] CREATING NOTIFICATION
+[LIKES] CREATING LIKE NOTIFICATION
 ```
 
 but then:
 
 ```text
-[LIKES] NOTIFICATION ERROR
+[NOTIFICATION] CREATE ERROR
 ```
 
-then the notification service/database is the problem.
+then we know the problem is specifically the notification database operation.
 
-Send me that exact error.
-
----
-
-### If you see:
+If you get:
 
 ```text
-[LIKES] NOTIFICATION CREATED
+[NOTIFICATION] CREATED SUCCESSFULLY
 ```
 
-but Uyi Joe doesn't get realtime:
+but Expo doesn't show it, then the backend is fixed and we move to the realtime subscription.
 
-Then the **backend notification creation works**, and we'd investigate Supabase Realtime/RLS/subscription.
+### One thing I would check immediately
 
-But you've already proven realtime works with your system notification, so this would be much easier to isolate.
+After liking, run:
 
----
-
-### For comments, your previous implementation would never reliably work
-
-Because this:
-
-```js
-data?.user_id
+```sql
+SELECT
+  id,
+  recipient_id,
+  actor_id,
+  type,
+  title,
+  body,
+  reference_id,
+  reference_type,
+  read,
+  created_at
+FROM public.notifications
+ORDER BY created_at DESC
+LIMIT 10;
 ```
 
-was checking for `user_id` on the **array returned by GET comments**.
+If the like notification appears there, **do not change the backend again**. At that point the problem is between the database INSERT and Expo realtime.
 
-Moving the notification logic to the successful `POST /api/comments` operation fixes the fundamental problem.
+If it doesn't appear there, the new backend logs will tell us exactly why.
 
----
 
-## Your final flow
 
-After these changes, you should have:
-
-```text
-                 USER ACTION
-                     │
-          ┌──────────┼──────────┐
-          ↓          ↓          ↓
-        LIKE      COMMENT     MESSAGE
-          │          │          │
-          ↓          ↓          ↓
-      Backend     Backend     Backend
-          │          │          │
-          └──────────┼──────────┘
-                     ↓
-          createNotification()
-                     ↓
-             Supabase table
-                     ↓
-             Supabase Realtime
-                     ↓
-          NotificationProvider
-                     ↓
-          notificationsStore
-                     ↓
-             unreadCount +1
-                     ↓
-              🔔 Badge
-```
-
-So **yes, we're now at the stage of connecting every user action to the notification service**. Likes and comments are the first two to fix; after you test these logs, we can connect **subscriptions/follows and messages** using exactly the same pattern without disturbing the working realtime system.

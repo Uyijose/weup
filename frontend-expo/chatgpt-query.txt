@@ -18,6 +18,8 @@ http://localhost:8081/creator/become-creator
 
 npx tsc --noEmit
 
-utejoe: 0e1e0b54-90d0-4a79-b9bd-efb20365b18c
+utejoe: 7fe21bc8-5be5-40f1-9f36-8e2436b7bd43
 
 uyi joe: fcf55afc-038f-4a77-a658-5a42214cc646
+
+post_id: 9c7bbea1-8e50-4865-b06a-118cdcd4ebcb

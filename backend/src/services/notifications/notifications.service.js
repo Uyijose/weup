@@ -1,4 +1,4 @@
-import { supabase } from "../../lib/supabase.js";
+import { supabaseAdmin } from "../../lib/supabaseAdmin.js";
 
 /* -------------------------------------------------
    CREATE NOTIFICATION
@@ -13,6 +13,18 @@ export async function createNotification({
   referenceId = null,
   referenceType = null,
 }) {
+  console.log(
+    "[NOTIFICATION] CREATE REQUEST",
+    {
+      recipientId,
+      actorId,
+      type,
+      title,
+      referenceId,
+      referenceType,
+    }
+  );
+
   if (!recipientId) {
     throw new Error("Notification recipient is required");
   }
@@ -29,46 +41,7 @@ export async function createNotification({
     throw new Error("Notification body is required");
   }
 
-  /*
-   * Prevent duplicate event notifications.
-   *
-   * We only perform this check when there is a
-   * concrete reference object.
-   *
-   * This prevents retries from creating duplicates
-   * for the same actor + recipient + event.
-   *
-   * Multiple messages/comments can still create
-   * separate notifications because their reference_id
-   * will be different.
-   */
-  if (
-    actorId &&
-    referenceId &&
-    referenceType
-  ) {
-    const { data: existing, error: existingError } =
-      await supabase
-        .from("notifications")
-        .select("*")
-        .eq("recipient_id", recipientId)
-        .eq("actor_id", actorId)
-        .eq("type", type)
-        .eq("reference_id", referenceId)
-        .eq("reference_type", referenceType)
-        .limit(1)
-        .maybeSingle();
-
-    if (existingError) {
-      throw existingError;
-    }
-
-    if (existing) {
-      return existing;
-    }
-  }
-
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("notifications")
     .insert({
       recipient_id: recipientId,
@@ -84,8 +57,18 @@ export async function createNotification({
     .single();
 
   if (error) {
+    console.error(
+      "[NOTIFICATION] CREATE ERROR",
+      error
+    );
+
     throw error;
   }
+
+  console.log(
+    "[NOTIFICATION] CREATED SUCCESSFULLY",
+    data
+  );
 
   return data;
 }
@@ -246,7 +229,7 @@ export async function getNotifications(
     100
   );
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("notifications")
     .select("*")
     .eq("recipient_id", userId)
@@ -273,7 +256,7 @@ export async function getUnreadNotificationCount(
     throw new Error("User ID is required");
   }
 
-  const { count, error } = await supabase
+  const { count, error } = await supabaseAdmin
     .from("notifications")
     .select("id", {
       count: "exact",
@@ -303,7 +286,7 @@ export async function markNotificationAsRead(
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("notifications")
     .update({
       read: true,
@@ -331,7 +314,7 @@ export async function markAllNotificationsAsRead(
     throw new Error("User ID is required");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("notifications")
     .update({
       read: true,
