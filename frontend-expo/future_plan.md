@@ -67,3 +67,10 @@ when selecting a video it doesn't show the name of the file, it only show number
 
 frontend-expo\utils\compressVideo.ts
 frontend-expo\utils\gtag.ts
+
+
+
+
+
+22 vulnerabilities (8 moderate, 14 high)
+npm audit

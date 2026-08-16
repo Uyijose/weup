@@ -46,6 +46,8 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   ├── help.tsx
 │   │   ├── newsroom.tsx
 │   │   └── safety.tsx
+│   ├── notifications
+│   │   └── index.tsx
 │   ├── posts
 │   │   ├── [id].tsx
 │   │   └── index.tsx
@@ -109,6 +111,8 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   └── TypingIndicator.tsx
 │   ├── navigation
 │   │   └── TabIcon.tsx
+│   ├── notifications
+│   │   └── NotificationItem.tsx
 │   ├── profile
 │   │   ├── AvatarPicker.tsx
 │   │   ├── CreatorSection.tsx
@@ -141,6 +145,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   └── topics.ts
 ├── context
 │   ├── AuthProvider.tsx
+│   ├── NotificationProvider.tsx
 │   ├── SocketProvider.tsx
 │   └── ThemeProvider.tsx
 ├── hooks
@@ -157,7 +162,9 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── auth.service.ts
 │   ├── comments.service.ts
 │   ├── messaging.service.ts
+│   ├── notifications.service.ts
 │   ├── posts.service.ts
+│   ├── pushNotifications.service.ts
 │   ├── search.service.ts
 │   ├── upload.service.ts
 │   ├── users.service.ts
@@ -168,6 +175,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── exploreStore.ts
 │   ├── likesStore.ts
 │   ├── messagesStore.ts
+│   ├── notificationsStore.ts
 │   ├── postsStore.ts
 │   ├── reportsStore.ts
 │   ├── topicsStore.ts
@@ -217,6 +225,8 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   │   └── messages.styles.ts
 │   ├── navigation
 │   │   └── tabIcon.styles.ts
+│   ├── notifications
+│   │   └── notifications.styles.ts
 │   ├── profile
 │   │   ├── historyVideoCard.styles.ts
 │   │   ├── profileActions.styles.ts
@@ -248,6 +258,7 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── api.ts
 │   ├── auth.ts
 │   ├── message.ts
+│   ├── notification.ts
 │   ├── post.ts
 │   └── user.ts
 ├── utils
@@ -257,15 +268,18 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 │   ├── gtag.ts
 │   ├── messagesApi.ts
 │   ├── realtimeChat.ts
+│   ├── realtimeNotifications.ts
 │   └── safePopunder.ts
 ├── .gitignore
 ├── AGENTS.md
 ├── app.json
 ├── chatgpt-query.txt
 ├── CLAUDE.md
+├── eas.json
 ├── expo-env.d.ts
 ├── extra_plan.md
 ├── future_plan.md
+├── google-services.json
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
@@ -274,5 +288,6 @@ This file is auto-generated. Unnecessary folders (node_modules, build, test_run,
 ├── README.md
 ├── test.md
 ├── tsconfig.json
+├── we-up-499109-831f9219c863.json
 └── WeUp_Expo_Migration_Plan.md
 ```

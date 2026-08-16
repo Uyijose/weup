@@ -1,1406 +1,940 @@
-Yes. **That is exactly the next stage.** You have already proven that the notification infrastructure works independently. Now we need to connect the actual user actions to `createNotification()`.
+Yes. Since the in-app notification system is now working, **Phase 5.8.38 should be implemented separately from the existing notification table**.
 
-Your current backend already has authenticated like/comment routes, and the notification service exists. For example, your likes route currently inserts the like and returns immediately; it does not yet call the notification service.  Likewise, your comments route creates the comment but currently stops there. 
+I recommend we do this in stages:
 
-I would do this in **two stages**:
+1. Create `user_devices`
+2. Install/configure `expo-notifications`
+3. Get the Expo push token on the device
+4. Send that token to your backend
+5. Store/update the token in Supabase
+6. When a like/comment notification is created, send a push notification
+7. Test with a direct push first
+8. Then connect it to likes/comments
+9. Finally handle notification taps
 
-1. **First:** move the realtime listener to the authenticated app level.
-2. **Second:** connect **Like → Comment → Subscribe → Message** to the notification service.
-
-Don't change pagination or retention yet. They are not necessary for getting the core system working.
-
----
-
-# 1. Final architecture
-
-You want this:
-
-```text
-                    AUTHENTICATED EXPO APP
-                             │
-                             ▼
-                   NotificationProvider
-                             │
-              ┌──────────────┴──────────────┐
-              ▼                             ▼
-       loadNotifications()          Realtime subscription
-       loadUnreadCount()                    │
-              │                             │
-              └──────────────┬──────────────┘
-                             ▼
-                    notificationsStore
-                             ▲
-                             │
-                    Supabase notifications
-                             ▲
-                             │
-                     Backend services
-                             ▲
-          ┌──────────────────┼──────────────────┐
-          │                  │                  │
-        LIKE              COMMENT          SUBSCRIBE
-          │                  │                  │
-          └──────────────────┼──────────────────┘
-                             │
-                          MESSAGE
-```
-
-Your existing Expo structure already has `app/_layout.tsx`, `context`, `services`, `stores`, etc., so we can fit this into what you already have. 
+Expo's current documentation confirms that push notifications require `expo-notifications`, an Expo push token, notification credentials, and a development build rather than Expo Go for remote push notifications. ([Expo Documentation][1])
 
 ---
 
-# 2. Phase 5.8.26–5.8.28: Global notification listener
+# 1. First: Supabase
 
-You currently have the realtime listener being used by the notifications screen. **We should move ownership of the listener to `AuthProvider`**, because your existing `AuthProvider` already knows when the user logs in/logs out. Your existing provider calls `hydrateAuth()` and `listenToAuthChanges()`. 
+We need a new table.
 
-This is cleaner than creating another authentication provider.
+## Table: `user_devices`
 
-## Create this file
+Run this in **Supabase → SQL Editor**:
 
-```text
-frontend-expo/context/NotificationProvider.tsx
+```sql
+create table public.user_devices (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  push_token text not null,
+  platform text not null,
+  device_name text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index user_devices_push_token_key
+on public.user_devices(push_token);
+
+create index user_devices_user_id_idx
+on public.user_devices(user_id);
 ```
 
-### Git Bash
+This gives you:
 
-From the `frontend-expo` directory:
+```text
+user_devices
+│
+├── id
+├── user_id
+├── push_token
+├── platform
+├── device_name
+├── created_at
+└── updated_at
+```
+
+One user can therefore have:
+
+```text
+User A
+│
+├── Android phone
+├── iPhone
+└── Tablet
+```
+
+---
+
+# 2. Enable RLS
+
+Because the frontend should **not directly manage arbitrary devices**, don't simply make the entire table publicly writable.
+
+Run:
+
+```sql
+alter table public.user_devices enable row level security;
+```
+
+For our architecture, the backend will manage the table using `supabaseAdmin`.
+
+That means we don't need an anon policy that lets clients insert arbitrary `user_id` values.
+
+---
+
+# 3. Add a unique constraint
+
+We already created a unique index on the push token.
+
+That's important because the same token should not be registered repeatedly.
+
+For example:
+
+```text
+User A
+ExponentPushToken[abc123]
+```
+
+shouldn't produce:
+
+```text
+row 1 → abc123
+row 2 → abc123
+row 3 → abc123
+row 4 → abc123
+```
+
+The backend will update the existing token instead.
+
+---
+
+# 4. Install Expo packages
+
+Go to your Expo project:
 
 ```bash
-mkdir -p context
-touch context/NotificationProvider.tsx
+cd frontend-expo
 ```
+
+Then:
+
+```bash
+npx expo install expo-notifications expo-constants
+```
+
+Expo officially recommends these packages for obtaining the Expo push token and determining the EAS project ID. ([Expo Documentation][1])
 
 ---
 
-# 3. `NotificationProvider.tsx`
+# 5. Important: Expo Go will NOT be enough
 
-Put this complete code inside:
+This is important because you've been testing with Expo.
 
-```tsx
-import React, {
-  ReactNode,
-  useEffect,
-  useRef,
-} from "react";
+For remote push notifications, **Expo Go is not sufficient on current SDKs**. You need a development build. ([Expo Documentation][2])
 
-import { useAuthStore } from "../stores/authStore";
-import { useNotificationsStore } from "../stores/notificationsStore";
-import {
-  subscribeToNotifications,
-} from "../utils/realtimeNotifications";
+So don't waste time trying to make the remote push work inside Expo Go.
 
-interface Props {
-  children: ReactNode;
-}
+We'll eventually use:
 
-export default function NotificationProvider({
-  children,
-}: Props) {
-  const user = useAuthStore((state) => state.user);
-  const loading = useAuthStore((state) => state.loading);
-
-  const loadNotifications =
-    useNotificationsStore(
-      (state) => state.loadNotifications
-    );
-
-  const loadUnreadCount =
-    useNotificationsStore(
-      (state) => state.loadUnreadCount
-    );
-
-  const unsubscribeRef = useRef<
-    (() => void) | null
-  >(null);
-
-  useEffect(() => {
-    // Do nothing while auth is still loading.
-    if (loading) {
-      return;
-    }
-
-    // Clean up any previous subscription.
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
-    }
-
-    // User logged out.
-    if (!user?.id) {
-      return;
-    }
-
-    console.log(
-      "[NOTIFICATION PROVIDER] Initializing for:",
-      user.id
-    );
-
-    let active = true;
-
-    const initialize = async () => {
-      try {
-        /*
-         * Load existing notifications first.
-         */
-        await Promise.all([
-          loadNotifications(),
-          loadUnreadCount(),
-        ]);
-
-        if (!active) {
-          return;
-        }
-
-        /*
-         * Then subscribe to future notifications.
-         */
-        console.log(
-          "[NOTIFICATION PROVIDER] Subscribing..."
-        );
-
-        unsubscribeRef.current =
-          subscribeToNotifications(user.id);
-      } catch (error) {
-        console.log(
-          "[NOTIFICATION PROVIDER] Initialization error:",
-          error
-        );
-      }
-    };
-
-    initialize();
-
-    return () => {
-      active = false;
-
-      if (unsubscribeRef.current) {
-        console.log(
-          "[NOTIFICATION PROVIDER] Cleaning up subscription"
-        );
-
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
-    };
-  }, [
-    user?.id,
-    loading,
-    loadNotifications,
-    loadUnreadCount,
-  ]);
-
-  return <>{children}</>;
-}
+```bash
+eas build --profile development --platform android
 ```
+
+and install that build on your Android phone.
+
+Since you're currently working with Android, let's get Android working first. Then we'll add iOS.
 
 ---
 
-# 4. Edit `AuthProvider.tsx`
+# 6. Configure `app.json`
 
-Your existing provider is already handling authentication. Don't duplicate that logic.
-
-Open:
+I need you to locate:
 
 ```text
-frontend-expo/context/AuthProvider.tsx
+frontend-expo/app.json
 ```
 
-Add:
+You probably already have an Expo configuration.
 
-```tsx
-import NotificationProvider from "./NotificationProvider";
+Find:
+
+```json
+"plugins": []
 ```
 
-Then replace the current:
+or whatever your current `plugins` array is.
 
-```tsx
-return <>{children}</>;
+### OLD
+
+If you currently have something like:
+
+```json
+"plugins": []
 ```
 
-with:
+### REPLACE WITH
 
-```tsx
-return (
-  <NotificationProvider>
-    {children}
-  </NotificationProvider>
-);
+```json
+"plugins": [
+  "expo-notifications"
+]
 ```
 
-So the end becomes:
+If you already have other plugins, **do not delete them**.
 
-```tsx
-return (
-  <NotificationProvider>
-    {children}
-  </NotificationProvider>
-);
+For example:
+
+### OLD
+
+```json
+"plugins": [
+  "expo-router"
+]
 ```
 
-That's all.
+### NEW
 
-This means:
-
-```text
-AuthProvider
-   ↓
-NotificationProvider
-   ↓
-Expo application
+```json
+"plugins": [
+  "expo-router",
+  "expo-notifications"
+]
 ```
 
-When the authenticated user changes, the notification provider changes with them.
+The notifications config plugin is required for the native configuration. ([Expo Documentation][1])
 
 ---
 
-# 5. IMPORTANT: remove the notification-screen realtime subscription
+# 7. Create the frontend notification registration service
 
-This is important.
-
-You **do not want**:
+Create this file:
 
 ```text
-NotificationProvider
-        ↓
-Realtime subscription #1
-
-Notifications screen
-        ↓
-Realtime subscription #2
+frontend-expo/services/pushNotifications.service.ts
 ```
 
-because then one notification could be received twice.
+Git Bash:
 
-Your previous logs showed the subscription being created when the notification screen opened:
-
-```text
-[REALTIME NOTIFICATIONS] Subscribing for user...
-[REALTIME NOTIFICATIONS] Status: SUBSCRIBED
+```bash
+mkdir -p services
+touch services/pushNotifications.service.ts
 ```
 
-That should now happen at the authenticated-app level.
+Then put **this complete code** inside:
 
-Open:
+```ts
+import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
-```text
-frontend-expo/app/notifications/index.tsx
-```
-
-Find the `useEffect` that calls:
-
-```tsx
-subscribeToNotifications(...)
-```
-
-and **remove that realtime subscription effect entirely**.
-
-The notification screen should only:
-
-```text
-load existing notifications
-display them
-mark them read
-```
-
-It should **not own realtime** anymore.
-
----
-
-# 6. Your `realtimeNotifications.ts`
-
-You already have this file:
-
-```text
-frontend-expo/utils/realtimeNotifications.ts
-```
-
-Keep it.
-
-It should essentially look like:
-
-```tsx
-import { supabase } from "../lib/supabase";
-import { useNotificationsStore } from "../stores/notificationsStore";
-
-export function subscribeToNotifications(
-  userId: string
-) {
+export async function registerForPushNotificationsAsync() {
   console.log(
-    "[REALTIME NOTIFICATIONS] Subscribing for user:",
-    userId
+    "[PUSH] Starting push notification registration"
   );
 
-  const channel = supabase
-    .channel(`notifications:${userId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "notifications",
-        filter: `recipient_id=eq.${userId}`,
-      },
-      (payload) => {
-        console.log(
-          "[REALTIME NOTIFICATIONS] New notification:",
-          payload.new
-        );
-
-        useNotificationsStore
-          .getState()
-          .addNotification(payload.new as any);
-      }
-    )
-    .subscribe((status) => {
-      console.log(
-        "[REALTIME NOTIFICATIONS] Status:",
-        status
-      );
-    });
-
-  return () => {
+  if (Platform.OS === "web") {
     console.log(
-      "[REALTIME NOTIFICATIONS] Unsubscribing:",
-      userId
+      "[PUSH] Web platform detected - skipping push registration"
     );
 
-    supabase.removeChannel(channel);
-  };
-}
-```
+    return null;
+  }
 
-The key thing is that it returns:
+  const existingPermissions =
+    await Notifications.getPermissionsAsync();
 
-```tsx
-return () => {
-  supabase.removeChannel(channel);
-};
-```
-
-so the provider can clean it up.
-
----
-
-# 7. Now the important part: Like → Notification
-
-Your current likes route is:
-
-```text
-backend/src/routes/likes/likes.routes.js
-```
-
-It currently does:
-
-```text
-check existing like
-      ↓
-if exists → unlike
-      ↓
-otherwise insert like
-      ↓
-return liked:true
-```
-
-Your existing route is authenticated with `requireAuth`. 
-
-We need:
-
-```text
-like succeeds
-     ↓
-get post owner
-     ↓
-createLikeNotification()
-     ↓
-return response
-```
-
----
-
-# 8. Edit `likes.routes.js`
-
-Open:
-
-```text
-backend/src/routes/likes/likes.routes.js
-```
-
-### Current import
-
-You currently have:
-
-```js
-import express from "express";
-import { supabase } from "../../services/supabase.service.js";
-import { requireAuth } from "../../middleware/auth.middleware.js";
-```
-
-Replace it with:
-
-```js
-import express from "express";
-import { supabase } from "../../services/supabase.service.js";
-import { requireAuth } from "../../middleware/auth.middleware.js";
-import {
-  createLikeNotification,
-} from "../../services/notifications/notifications.service.js";
-```
-
----
-
-# 9. Replace the successful like section
-
-Currently you have:
-
-```js
-await supabase.from("likes").insert({
-  user_id: req.user.id,
-  post_id: post_id || null,
-  video_part_id: video_part_id || null,
-});
-
-res.json({ liked: true });
-```
-
-Replace it with:
-
-```js
-const { error: likeError } = await supabase
-  .from("likes")
-  .insert({
-    user_id: req.user.id,
-    post_id: post_id || null,
-    video_part_id: video_part_id || null,
-  });
-
-if (likeError) {
-  console.error(
-    "[LIKES] INSERT ERROR",
-    likeError
+  console.log(
+    "[PUSH] Existing permission:",
+    existingPermissions.status
   );
 
-  return res.status(400).json({
-    error: likeError.message,
-  });
-}
+  let finalStatus =
+    existingPermissions.status;
 
-/*
- * Only create a notification for post likes.
- */
-if (post_id) {
-  const { data: post, error: postError } =
-    await supabase
-      .from("posts")
-      .select("id,user_id")
-      .eq("id", post_id)
-      .single();
+  if (finalStatus !== "granted") {
+    const requestedPermissions =
+      await Notifications.requestPermissionsAsync();
 
-  if (postError) {
-    console.error(
-      "[LIKES] FAILED TO FETCH POST OWNER",
-      postError
+    finalStatus =
+      requestedPermissions.status;
+
+    console.log(
+      "[PUSH] Requested permission:",
+      finalStatus
     );
-  } else if (post?.user_id) {
-    let actorName = "Someone";
+  }
 
-    const { data: actor } = await supabase
-      .from("users")
-      .select("username,full_name")
-      .eq("id", req.user.id)
-      .maybeSingle();
+  if (finalStatus !== "granted") {
+    console.log(
+      "[PUSH] Notification permission was not granted"
+    );
 
-    actorName =
-      actor?.full_name ||
-      actor?.username ||
-      "Someone";
+    return null;
+  }
 
-    try {
-      await createLikeNotification({
-        recipientId: post.user_id,
-        actorId: req.user.id,
-        postId: post.id,
-        actorName,
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId;
+
+  console.log(
+    "[PUSH] Project ID:",
+    projectId
+  );
+
+  if (!projectId) {
+    console.error(
+      "[PUSH] EAS project ID is missing"
+    );
+
+    return null;
+  }
+
+  try {
+    const token =
+      await Notifications.getExpoPushTokenAsync({
+        projectId,
       });
-    } catch (notificationError) {
-      /*
-       * Do not make a successful like fail
-       * just because notification creation failed.
-       */
-      console.error(
-        "[LIKES] NOTIFICATION ERROR",
-        notificationError
-      );
-    }
+
+    console.log(
+      "[PUSH] Expo push token:",
+      token.data
+    );
+
+    return token.data;
+  } catch (error) {
+    console.error(
+      "[PUSH] Failed to get Expo push token:",
+      error
+    );
+
+    return null;
   }
 }
-
-return res.json({
-  liked: true,
-});
 ```
-
-This is deliberately done **after the like succeeds**.
 
 ---
 
-# 10. Why this is safe for duplicate likes
+# 8. Create backend device service
 
-Your current route already checks:
-
-```js
-.eq("user_id", req.user.id)
-.eq(column, value)
-.maybeSingle();
-```
-
-before inserting. 
-
-Therefore:
+Create:
 
 ```text
-First like
-→ insert like
-→ notification
-
-Second request while already liked
-→ delete like
-→ NO notification
+backend/src/services/devices/devices.service.js
 ```
 
-That's exactly what Phase 5.8.14 wants.
+Git Bash:
 
----
+```bash
+mkdir -p backend/src/services/devices
+touch backend/src/services/devices/devices.service.js
+```
 
-# 11. Comment → Notification
-
-Your current comment endpoint inserts:
+Put:
 
 ```js
-const { data, error } = await supabase
-  .from("comments")
-  .insert({
-    post_id: post_id || null,
-    video_part_id: video_part_id || null,
-    user_id: req.user.id,
-    comment,
-    image_url,
-  })
+import { supabaseAdmin } from "../../lib/supabaseAdmin.js";
+
+export async function registerDevice({
+  userId,
+  pushToken,
+  platform,
+  deviceName = null,
+}) {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  if (!pushToken) {
+    throw new Error("Push token is required");
+  }
+
+  if (!platform) {
+    throw new Error("Platform is required");
+  }
+
+  console.log(
+    "[DEVICES] Registering device",
+    {
+      userId,
+      pushToken,
+      platform,
+      deviceName,
+    }
+  );
+
+  const { data, error } =
+    await supabaseAdmin
+      .from("user_devices")
+      .upsert(
+        {
+          user_id: userId,
+          push_token: pushToken,
+          platform,
+          device_name: deviceName,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "push_token",
+        }
+      )
+      .select()
+      .single();
+
+  if (error) {
+    console.error(
+      "[DEVICES] REGISTER ERROR",
+      error
+    );
+
+    throw error;
+  }
+
+  console.log(
+    "[DEVICES] DEVICE REGISTERED",
+    data
+  );
+
+  return data;
+}
 ```
 
-and returns the comment. 
+Notice that this uses:
 
-We need to notify the owner after the insert succeeds.
+```js
+supabaseAdmin
+```
+
+not the anon client.
+
+That's intentional.
 
 ---
 
-## Edit imports
+# 9. Create device route
 
-At the top of:
+Create:
 
 ```text
-backend/src/routes/comments/comments.routes.js
+backend/src/routes/devices/devices.routes.js
 ```
 
-change:
+Git Bash:
+
+```bash
+mkdir -p backend/src/routes/devices
+touch backend/src/routes/devices/devices.routes.js
+```
+
+Put:
 
 ```js
 import express from "express";
-import { supabase } from "../../services/supabase.service.js";
-import { requireAuth } from "../../middleware/auth.middleware.js";
-```
 
-to:
-
-```js
-import express from "express";
-import { supabase } from "../../services/supabase.service.js";
 import { requireAuth } from "../../middleware/auth.middleware.js";
+
 import {
-  createCommentNotification,
-} from "../../services/notifications/notifications.service.js";
+  registerDevice,
+} from "../../services/devices/devices.service.js";
+
+const router = express.Router();
+
+router.post(
+  "/register",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const {
+        pushToken,
+        platform,
+        deviceName,
+      } = req.body;
+
+      console.log(
+        "[DEVICES ROUTE] REGISTER REQUEST",
+        {
+          userId: req.user.id,
+          pushToken,
+          platform,
+          deviceName,
+        }
+      );
+
+      const device =
+        await registerDevice({
+          userId: req.user.id,
+          pushToken,
+          platform,
+          deviceName,
+        });
+
+      return res.status(201).json({
+        device,
+      });
+    } catch (error) {
+      console.error(
+        "[DEVICES ROUTE] REGISTER ERROR",
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          error?.message ||
+          "Failed to register device",
+      });
+    }
+  }
+);
+
+export default router;
 ```
 
 ---
 
-# 12. Add comment notification
+# 10. Register the route in `app.js`
+
+File:
+
+```text
+backend/src/app.js
+```
+
+### ADD THIS IMPORT
 
 Find:
 
 ```js
-if (error) return res.status(400).json({ error: error.message });
-
-res.json(data);
+import notificationsRoutes from "./routes/notifications/notifications.routes.js";
 ```
 
-inside the `POST /` route.
-
-Replace that portion with:
+Immediately **AFTER** it, add:
 
 ```js
-if (error) {
-  return res.status(400).json({
-    error: error.message,
-  });
-}
+import devicesRoutes from "./routes/devices/devices.routes.js";
+```
 
-/*
- * Notify the post owner.
- */
-if (post_id && data?.user_id) {
-  const { data: post, error: postError } =
-    await supabase
-      .from("posts")
-      .select("id,user_id")
-      .eq("id", post_id)
-      .single();
+So you have:
 
-  if (postError) {
+```js
+import notificationsRoutes from "./routes/notifications/notifications.routes.js";
+import devicesRoutes from "./routes/devices/devices.routes.js";
+```
+
+---
+
+### ADD THIS ROUTE
+
+Find:
+
+```js
+app.use("/api/notifications", requireAuth, notificationsRoutes);
+```
+
+Immediately **AFTER** it, add:
+
+```js
+app.use("/api/devices", devicesRoutes);
+```
+
+So:
+
+```js
+app.use("/api/notifications", requireAuth, notificationsRoutes);
+app.use("/api/devices", devicesRoutes);
+```
+
+Don't add `requireAuth` here because the route itself already has:
+
+```js
+requireAuth
+```
+
+---
+
+# 11. Add frontend registration API
+
+File:
+
+```text
+frontend-expo/services/pushNotifications.service.ts
+```
+
+We need to add another function.
+
+At the **very bottom of the file**, after:
+
+```ts
+export async function registerForPushNotificationsAsync() {
+```
+
+and its closing `}` — add:
+
+```ts
+export async function registerDevicePushToken(
+  pushToken: string
+) {
+  const API_BASE =
+    process.env.EXPO_PUBLIC_BACKEND_URL;
+
+  if (!API_BASE) {
     console.error(
-      "[COMMENTS] FAILED TO FETCH POST OWNER",
-      postError
+      "[PUSH] Backend URL is missing"
     );
-  } else if (post?.user_id) {
-    const { data: actor } = await supabase
-      .from("users")
-      .select("username,full_name")
-      .eq("id", req.user.id)
-      .maybeSingle();
 
-    const actorName =
-      actor?.full_name ||
-      actor?.username ||
-      "Someone";
-
-    try {
-      await createCommentNotification({
-        recipientId: post.user_id,
-        actorId: req.user.id,
-        postId: post.id,
-        actorName,
-      });
-    } catch (notificationError) {
-      console.error(
-        "[COMMENTS] NOTIFICATION ERROR",
-        notificationError
-      );
-    }
+    return null;
   }
-}
 
-return res.json(data);
-```
+  const { getAuthToken } =
+    await import("../utils/getAuthToken");
 
-Your existing notification service already prevents self-notifications:
+  const token = await getAuthToken();
 
-```js
-if (recipientId === actorId) {
-  return null;
-}
-```
+  if (!token) {
+    console.log(
+      "[PUSH] No auth token available"
+    );
 
-so a user commenting on their own post won't generate a notification.
+    return null;
+  }
 
----
+  const url =
+    `${API_BASE}/api/devices/register`;
 
-# 13. Subscribe → Notification
+  console.log(
+    "[PUSH] Registering token with backend:",
+    url
+  );
 
-Your subscription implementation is slightly different from likes/comments.
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      pushToken,
+      platform: Platform.OS,
+      deviceName: null,
+    }),
+  });
 
-Your Expo creator page currently uses:
+  const data = await response.json();
 
-```text
-usersStore.toggleSubscription()
-```
+  console.log(
+    "[PUSH] Backend registration response:",
+    data
+  );
 
-and the subscription data is stored in:
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+      "Failed to register push token"
+    );
+  }
 
-```text
-subscriptions
-```
-
-with:
-
-```text
-subscriber_id
-creator_id
-```
-
-as you've already established. 
-
-This means we need to find the **actual `toggleSubscription()` implementation** before changing it.
-
-### Don't add notification code directly to `creator/[id].tsx`.
-
-That's important.
-
-The notification must be created by the backend, not by:
-
-```text
-Expo → Supabase insert → notification
-```
-
-because a malicious client could manufacture notifications.
-
-The correct flow is:
-
-```text
-Expo
- ↓
-usersStore.toggleSubscription()
- ↓
-backend subscription endpoint
- ↓
-subscription succeeds
- ↓
-createFollowNotification()
-```
-
-Your plan calls this "follow", but because WeUp actually calls the relationship **subscription**, I'd keep the database notification type as:
-
-```text
-follow
-```
-
-while the UI can say:
-
-```text
-John subscribed to you.
-```
-
-or:
-
-```text
-John followed you.
-```
-
-depending on the product wording you want.
-
----
-
-# 14. Message → Notification
-
-Same principle.
-
-Don't create a notification from:
-
-```text
-frontend-expo/app/chat/[id].tsx
-```
-
-The backend should create it after the message is successfully inserted.
-
-The flow becomes:
-
-```text
-User A sends message
-        ↓
-messaging API
-        ↓
-message inserted
-        ↓
-identify recipients
-        ↓
-createMessageNotification()
-        ↓
-notifications
-        ↓
-Realtime
-        ↓
-User B sees badge
-```
-
-### One important consideration
-
-For messaging, we should **not create a notification every time the conversation list is opened**.
-
-Only:
-
-```text
-actual new message
-```
-
-should generate:
-
-```text
-message notification
-```
-
-And the sender should not receive one.
-
----
-
-# 15. System notifications
-
-You already have:
-
-```js
-createSystemNotification()
-```
-
-So this is already covered.
-
-For example:
-
-```js
-await createSystemNotification({
-  recipientId: userId,
-  title: "Welcome to WeUp",
-  body: "Your WeUp account is ready.",
-});
-```
-
-No actor is needed.
-
----
-
-# 16. Fix the GET notifications response
-
-Your original plan says:
-
-```json
-{
-  "notifications": [],
-  "unreadCount": 0
+  return data;
 }
 ```
 
-but your current route returns only:
-
-```json
-{
-  "notifications": []
-}
-```
-
-Since your Expo app already separately calls:
-
-```text
-/api/notifications/unread-count
-```
-
-it **works**, but I recommend leaving the two endpoints separate for now.
-
-Don't make an unnecessary API change.
-
-You already have:
-
-```text
-GET /api/notifications
-GET /api/notifications/unread-count
-```
-
-and your Expo service is using both.
-
 ---
 
-# 17. One improvement to your notification service
+# 12. Now we need to actually call registration
 
-Your current:
+This part is important.
 
-```js
-markNotificationAsRead()
-```
+We don't want to register the device every time some random component renders.
 
-uses:
+We should do it **once after the user is authenticated**.
 
-```js
-.select()
-.single()
-```
+You need to show me the file where your authentication state is initialized.
 
-If the notification ID doesn't belong to the authenticated user, `.single()` can throw.
-
-That's not necessarily wrong, but your route currently converts that into:
-
-```text
-500 Failed to mark notification as read
-```
-
-when it should ideally be:
-
-```text
-404 Notification not found
-```
-
-We can clean that up after the core integrations are working.
-
----
-
-# 18. Supabase: check Realtime once
-
-You've already proven Realtime works, so **do not recreate the table**.
-
-Your notification table already has the correct structure.
-
-Make sure `notifications` is included in Supabase Realtime publication.
-
-Run this in Supabase SQL Editor if you haven't already:
-
-```sql
-ALTER PUBLICATION supabase_realtime
-ADD TABLE public.notifications;
-```
-
-If Supabase says the table is already in the publication, **that's fine**. Don't change anything.
-
-Your successful realtime test already strongly indicates this is configured correctly.
-
----
-
-# 19. Add a uniqueness protection for subscriptions
-
-Because subscriptions should logically be unique, I'd also add this to Supabase:
-
-```sql
-ALTER TABLE public.subscriptions
-ADD CONSTRAINT subscriptions_subscriber_creator_unique
-UNIQUE (subscriber_id, creator_id);
-```
-
-**Only run this if that constraint doesn't already exist.**
-
-You can check:
-
-```sql
-SELECT
-  conname
-FROM pg_constraint
-WHERE conrelid = 'public.subscriptions'::regclass;
-```
-
-This is important because:
-
-```text
-User A → Subscribe to User B
-```
-
-shouldn't be able to create:
-
-```text
-row 1: A → B
-row 2: A → B
-row 3: A → B
-```
-
-That also makes notification duplication easier to control.
-
----
-
-# 20. Git Bash commands
-
-You don't need to recreate files that already exist.
-
-For the **new global provider**:
-
-From `frontend-expo`:
-
-```bash
-mkdir -p context
-touch context/NotificationProvider.tsx
-```
-
-For the backend notification service directory, if it already exists, this does no harm:
-
-```bash
-mkdir -p backend/src/services/notifications
-```
-
-For checking your files:
-
-```bash
-find frontend-expo -path "*notification*" -type f
-```
-
-and:
-
-```bash
-find backend/src -path "*notification*" -type f
-```
-
-You should end up with approximately:
+From your existing architecture, it may be something like:
 
 ```text
 frontend-expo/
 ├── app/
-│   ├── _layout.tsx
-│   └── notifications/
-│       └── index.tsx
-│
-├── components/
-│   └── notifications/
-│       └── NotificationItem.tsx
-│
-├── context/
-│   ├── AuthProvider.tsx
-│   └── NotificationProvider.tsx
-│
-├── services/
-│   └── notifications.service.ts
-│
+├── providers/
 ├── stores/
-│   └── notificationsStore.ts
-│
-├── types/
-│   └── notification.ts
-│
-└── utils/
-    └── realtimeNotifications.ts
+└── ...
+```
+
+I don't want to guess and tell you to modify the wrong file.
+
+### For now, DON'T add the registration call anywhere.
+
+First run the installation/configuration above.
+
+Then tell me the file that currently contains your authentication initialization/provider.
+
+---
+
+# 13. One more thing: EAS project ID
+
+Your code needs:
+
+```ts
+Constants.expoConfig?.extra?.eas?.projectId
+```
+
+or:
+
+```ts
+Constants.easConfig?.projectId
+```
+
+You need an EAS project.
+
+From:
+
+```text
+frontend-expo
+```
+
+run:
+
+```bash
+eas project:info
+```
+
+If that says there is no EAS project, run:
+
+```bash
+eas init
+```
+
+This will associate your Expo project with an EAS project.
+
+The project ID is required when calling `getExpoPushTokenAsync`. Expo specifically recommends using the EAS `projectId`. ([Expo Documentation][1])
+
+---
+
+# 14. Create the Android development build
+
+Once the above is done:
+
+```bash
+cd frontend-expo
+```
+
+Then:
+
+```bash
+eas build --profile development --platform android
+```
+
+You will need to configure Android push credentials during this process. Expo's current setup documentation describes Android FCM credentials as part of push notification setup. ([Expo Documentation][1])
+
+Install the resulting development build on your physical Android device.
+
+**Do not use Expo Go for this test.**
+
+---
+
+# 15. What we should see
+
+Once we add the registration call, your Metro console should show something like:
+
+```text
+[PUSH] Starting push notification registration
+
+[PUSH] Existing permission: denied
+
+[PUSH] Requested permission: granted
+
+[PUSH] Project ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+[PUSH] Expo push token: ExponentPushToken[xxxxxxxxxxxxxxxxxxxx]
+
+[PUSH] Registering token with backend:
+https://.../api/devices/register
+
+[PUSH] Backend registration response:
+{
+  device: {
+    ...
+  }
+}
+```
+
+And your backend should show:
+
+```text
+[DEVICES ROUTE] REGISTER REQUEST
+[DEVICES] Registering device
+[DEVICES] DEVICE REGISTERED
+```
+
+---
+
+# 16. Check Supabase
+
+After registering the device, go to:
+
+**Supabase → Table Editor → `user_devices`**
+
+You should see something like:
+
+| user_id   | push_token               | platform  |
+| --------- | ------------------------ | --------- |
+| user UUID | `ExponentPushToken[...]` | `android` |
+
+That confirms:
+
+```text
+Android
+ ↓
+Expo
+ ↓
+push token
+ ↓
+Backend
+ ↓
+Supabase
+```
+
+is working.
+
+---
+
+# 17. Don't connect likes/comments yet
+
+This is important.
+
+We should **not** immediately modify:
+
+```text
+likes.routes.js
+comments.routes.js
+notifications.service.js
+```
+
+until we prove that basic push delivery works.
+
+First prove:
+
+```text
+Device
+ ↓
+Permission
+ ↓
+ExpoPushToken
+ ↓
+Backend
+ ↓
+user_devices
+```
+
+Then:
+
+```text
+Backend
+ ↓
+Expo Push Service
+ ↓
+Android
+```
+
+Then we'll connect:
+
+```text
+Like
+ ↓
+createLikeNotification()
+ ↓
+sendPushNotification()
 ```
 
 and:
 
 ```text
-backend/
-└── src/
-    ├── middleware/
-    │   └── auth.middleware.js
-    │
-    ├── routes/
-    │   ├── comments/
-    │   │   └── comments.routes.js
-    │   ├── likes/
-    │   │   └── likes.routes.js
-    │   ├── messaging/
-    │   │   └── messaging.routes.js
-    │   └── notifications/
-    │       └── notifications.routes.js
-    │
-    └── services/
-        └── notifications/
-            └── notifications.service.js
+Comment
+ ↓
+createCommentNotification()
+ ↓
+sendPushNotification()
 ```
+
+This makes debugging much easier.
+
+Expo's push service is designed specifically for this architecture: your server sends the Expo push token and notification payload to Expo's push API, which then handles delivery through FCM/APNs. ([Expo Documentation][3])
 
 ---
 
-# 21. Restart the backend
+# 18. The final architecture we're building
 
-After editing the backend:
+You'll eventually have:
+
+```text
+                         USER ACTION
+                             │
+                    ┌────────▼────────┐
+                    │ Express Backend │
+                    └────────┬────────┘
+                             │
+                   createNotification()
+                             │
+                    ┌────────▼────────┐
+                    │   Supabase DB   │
+                    │ notifications   │
+                    └────────┬────────┘
+                             │
+                 ┌───────────┴───────────┐
+                 │                       │
+                 ▼                       ▼
+          Supabase Realtime       Push Service
+                 │                       │
+                 ▼                       ▼
+          In-app notification      Expo Push API
+                                         │
+                              ┌──────────┴──────────┐
+                              │                     │
+                              ▼                     ▼
+                           Android                iOS
+```
+
+And:
+
+```text
+user_devices
+│
+├── User A → Android
+├── User A → iPhone
+├── User B → Android
+└── User C → iPad
+```
+
+This is the right foundation for the future notification-preferences system you described.
+
+### Do these steps first
+
+Run these:
 
 ```bash
-cd backend
-pnpm dev
+cd frontend-expo
+npx expo install expo-notifications expo-constants
 ```
 
-If it's already running under nodemon, it should restart automatically.
+Create:
 
-Then start Expo:
+```text
+frontend-expo/services/pushNotifications.service.ts
+backend/src/services/devices/devices.service.js
+backend/src/routes/devices/devices.routes.js
+```
+
+Create the Supabase table with the SQL above.
+
+Add the route to `app.js`.
+
+Then run:
 
 ```bash
-cd ../frontend-expo
-npx expo start -c
+eas project:info
 ```
 
-The `-c` clears the Metro cache, which is useful after adding the provider.
-
----
-
-# 22. Test 1 — global realtime
-
-This is the first test.
-
-**Do NOT open `/notifications`.**
-
-Stay on:
-
-```text
-Home
-```
-
-or:
-
-```text
-Creator profile
-```
-
-Then insert a test notification from Supabase:
-
-```sql
-INSERT INTO public.notifications (
-  recipient_id,
-  actor_id,
-  type,
-  title,
-  body,
-  read
-)
-VALUES (
-  'fcf55afc-038f-4a77-a658-5a42214cc646',
-  '0e1e0b54-90d0-4a79-b9bd-efb20365b18c',
-  'system',
-  'Global realtime test',
-  'This notification was received outside the notification screen.',
-  false
-);
-```
-
-You should see:
-
-```text
-[NOTIFICATION PROVIDER] Initializing for: fcf...
-[NOTIFICATION PROVIDER] Subscribing...
-[REALTIME NOTIFICATIONS] Status: SUBSCRIBED
-```
-
-Then:
-
-```text
-[REALTIME NOTIFICATIONS] New notification: {...}
-```
-
-**without visiting `/notifications`.**
-
-That proves Phase 5.8.26 is complete.
-
----
-
-# 23. Test 2 — Like notification
-
-This is the important one.
-
-Use two accounts:
-
-```text
-Account A = Uyi Joe
-Account B = utejoe
-```
-
-Suppose Uyi Joe owns a post.
-
-Log in as:
-
-```text
-utejoe
-```
-
-Like Uyi Joe's post.
-
-Then Uyi Joe should receive:
-
-```text
-New like
-
-utejoe liked your video.
-```
-
-And the database should contain:
-
-```text
-type            = like
-actor_id        = utejoe
-recipient_id    = Uyi Joe
-reference_type  = post
-reference_id    = post ID
-read            = false
-```
-
-You should see the notification arrive **even while Uyi Joe is on Home**.
-
----
-
-# 24. Test 3 — Unlike
-
-utejoe:
-
-```text
-Like
-```
-
-→ Uyi gets notification.
-
-Then:
-
-```text
-Unlike
-```
-
-→ **no notification should be generated.**
-
-Then:
-
-```text
-Like again
-```
-
-→ a new like notification can be generated.
-
-That's correct because the second like is a new like event.
-
----
-
-# 25. Test 4 — Comment
-
-utejoe comments on Uyi Joe's post:
-
-```text
-utejoe commented on your video.
-```
-
-Uyi Joe receives it immediately.
-
-Check:
-
-```sql
-SELECT
-  type,
-  actor_id,
-  recipient_id,
-  reference_id,
-  reference_type,
-  body,
-  read
-FROM public.notifications
-ORDER BY created_at DESC
-LIMIT 10;
-```
-
-You should see:
-
-```text
-comment
-```
-
-with:
-
-```text
-reference_type = post
-```
-
----
-
-# 26. Test 5 — Self-comment
-
-Uyi Joe comments on **his own** post.
-
-Expected:
-
-```text
-Comment created ✅
-Notification created ❌
-```
-
-Same for likes:
-
-```text
-Self-like → no notification
-```
-
-This is important.
-
----
-
-# 27. Test 6 — Subscribe
-
-Use:
-
-```text
-utejoe
-```
-
-Subscribe to:
-
-```text
-Uyi Joe
-```
-
-Expected Uyi Joe:
-
-```text
-New follower
-
-utejoe followed you.
-```
-
-Database:
-
-```text
-type = follow
-actor_id = utejoe
-recipient_id = Uyi Joe
-reference_type = user
-reference_id = Uyi Joe's ID
-```
-
----
-
-# 28. Test 7 — Message
-
-utejoe sends Uyi Joe a message.
-
-Expected:
-
-```text
-New message
-
-utejoe sent you a message.
-```
-
-with:
-
-```text
-type = message
-reference_type = conversation
-reference_id = conversation ID
-```
-
-Then Uyi Joe replies.
-
-**utejoe** should get the notification.
-
-The sender should not get their own message notification.
-
----
-
-# 29. One thing I would NOT implement yet
-
-Don't implement:
-
-```text
-90-day deletion
-```
-
-or:
-
-```text
-cursor pagination
-```
-
-yet.
-
-Your current:
-
-```text
-limit=50
-```
-
-is completely adequate for the first working version.
-
-First make this chain 100% reliable:
-
-```text
-LIKE
-COMMENT
-SUBSCRIBE
-MESSAGE
-   ↓
-notifications table
-   ↓
-Realtime
-   ↓
-global NotificationProvider
-   ↓
-Zustand
-   ↓
-badge
-   ↓
-notification screen
-   ↓
-mark read
-```
-
-Once those four events work, the notification system is genuinely integrated rather than just having a notification UI.
-
-### One remaining piece
-
-I **wouldn't give you a guessed code replacement for the subscription and messaging routes yet**. The files you provided/search results establish that the Expo subscription action goes through `usersStore.toggleSubscription()` and that messaging uses `messagesStore`, but we need the **actual current implementations** of those backend endpoints before inserting notification calls. Guessing those routes could break your existing messaging/subscription logic.
-
-For likes and comments, however, we have the actual route code and the notification integration above is ready to apply.  
+**Stop there before modifying your authentication/provider file.** Send me the output of `eas project:info` and, more importantly, the file where your current authenticated-user initialization happens. Then we can add the token registration in exactly the right place without guessing. ([Expo Documentation][1])
+
+[1]: https://docs.expo.dev/push-notifications/push-notifications-setup/?utm_source=chatgpt.com "Expo push notifications setup - Expo Documentation"
+[2]: https://docs.expo.dev/push-notifications/faq/?utm_source=chatgpt.com "Push notifications troubleshooting and FAQ - Expo Documentation"
+[3]: https://docs.expo.dev/push-notifications/sending-notifications/?utm_source=chatgpt.com "Send notifications with the Expo Push Service - Expo Documentation"

@@ -1,6 +1,7 @@
 import React, { ReactNode, useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
 import NotificationProvider from "./NotificationProvider";
+import { registerForPushNotificationsAsync, registerDevicePushToken } from "../services/pushNotifications.service";
 import { useAuthStore } from "../stores/authStore";
 
 interface Props {
@@ -27,6 +28,46 @@ export default function AuthProvider({ children }: Props) {
       subscription?.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (loading || !user) {
+      return;
+    }
+
+    console.log(
+      "[PUSH REGISTRATION] Authenticated user detected:",
+      user.id
+    );
+
+    registerForPushNotificationsAsync()
+      .then(async (pushToken) => {
+        console.log(
+          "[PUSH REGISTRATION] Expo token result:",
+          pushToken
+        );
+
+        if (!pushToken) {
+          console.log(
+            "[PUSH REGISTRATION] No push token received"
+          );
+          return;
+        }
+
+        const result =
+          await registerDevicePushToken(pushToken);
+
+        console.log(
+          "[PUSH REGISTRATION] Device registration result:",
+          result
+        );
+      })
+      .catch((error) => {
+        console.error(
+          "[PUSH REGISTRATION] Registration failed:",
+          error
+        );
+      });
+  }, [user, loading]);
 
   useEffect(() => {
     if (loading) return;
